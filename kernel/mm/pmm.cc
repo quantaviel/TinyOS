@@ -9,9 +9,11 @@
 namespace mm {
 
 uint8_t pmm::bitmap[pmm::BITMAP_SIZE] = {0};
+uint8_t pmm::refcount[PAGE_MAX] = {0};
 
 void pmm::init(multiboot_info_t *mbi) {
-    for (int i = 0; i < BITMAP_SIZE; ++i) bitmap[i] = 0x7F;
+    for (int i = 0; i < BITMAP_SIZE; ++i) bitmap[i] = 0xFF;
+    for (int i = 0; i < PAGE_MAX; ++i) refcount[i] = 0;
 }
 
 void pmm::mark_page(paddr_t paddr) {
@@ -33,7 +35,7 @@ void pmm::mark_pages(paddr_t paddr, size_t len) {
         uint8_t bit  = pn & 7;
         bitmap[byte] |= (1 << bit);
     }
-    // FUTURE: need to mark 8 bit in one operation
+    /// FUTURE: need to mark 8 bit in one operation
 }
 
 void pmm::unmark_pages(paddr_t paddr, size_t len) {
@@ -45,7 +47,7 @@ void pmm::unmark_pages(paddr_t paddr, size_t len) {
         uint8_t bit  = pn & 7;
         bitmap[byte] &= ~(1 << bit);
     }
-    // FUTURE: need to mark 8 bit in one operation
+    /// FUTURE: need to mark 8 bit in one operation
 }
 
 paddr_t pmm::alloc_page() {
@@ -58,19 +60,34 @@ paddr_t pmm::alloc_page() {
         if (page == 0) continue;
         
         bitmap[i] |= (1 << bit);
+        inc_refcount(page << PAGE_SHIFT);
         return page << PAGE_SHIFT;
     }
     return 0;
-    // FUTURE: change to next-fit algorithm
+    /// FUTURE: change to next-fit algorithm
 }
 
 void pmm::free_page(paddr_t addr) {
     if (!is_marked(addr)) return;
     unmark_page(addr);
+    dec_refcount(addr);
 }
 
 bool pmm::is_marked(paddr_t paddr) {
     return bitmap[paddr >> 15] & (1 << ((paddr >> 12) & 7));
+}
+
+auto pmm::get_refcount(paddr_t paddr) -> int {
+    return refcount[paddr >> PAGE_SHIFT];
+}
+
+void pmm::inc_refcount(paddr_t paddr) {
+    refcount[paddr >> PAGE_SHIFT] ++;
+}
+
+void pmm::dec_refcount(paddr_t paddr) {
+    uint32_t page_number = paddr >> PAGE_SHIFT;
+    if (refcount[page_number] > 0) refcount[page_number]--;
 }
 
 

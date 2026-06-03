@@ -71,13 +71,29 @@ SECTIONS
     }
 
 	/* section kernel page global */
-	.kernel_page BLOCK(4K) : AT(ADDR(.bss) - 0xC0000000)
+	.kernel_page BLOCK(4K) : AT(ADDR(.kernel_page) - 0xC0000000)
 	{
 		*(.kpg)
 	}
 
+    __user_code_start = .;    /* 记录用户二进制块在内核中的起始虚拟地址 */
+	.user_embed BLOCK(4K) : AT(ADDR(.user_embed) - 0xC0000000)
+    {
+        *(.user_entry)
+        *(.text .rodata .data .bss)
+    }
+    __user_code_end = .;      /* 记录结束虚拟地址 */
+
+	. = ALIGN(4K);
 	__kernel_end = ALIGN(4);
-    __kernel_heap_start = ALIGN(4);
+	
+	__vmm_bitmap_start = .;
+
+	. += 256M;
+
+	__vmm_bitmap_end = .;
+
+    __kernel_heap_start = ALIGN(4K);
 
 	/* The compiler may produce other sections, by default it will put them in
 	   a segment with the same name. Simply add stuff here as needed. */

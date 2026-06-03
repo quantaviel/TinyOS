@@ -22,3 +22,22 @@ auto memcmp(const void *lhs, const void *rhs, size_t size) -> int {
     }
     return 0;
 }
+
+auto memset(void *src, uint8_t v, size_t size) -> void* {
+    uint8_t* d = (uint8_t*) src;
+    while (size--) *d++ = v;
+    return src;
+}
+
+auto strcpy(char *dst, const char* src) -> char* {
+    char *d = dst;
+    while (*src) *dst++ = *src++;
+    *dst = '\0';
+    return d;
+}
+
+auto strlen(const char* src) -> size_t {
+    uint32_t len = 0;
+    while (*src) ++src, ++len;
+    return len;
+}

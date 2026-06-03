@@ -50,6 +50,9 @@ SD_TYPE:
 #define SD_TYPE_CODE_X_READ_C                (0xE << 8)
 #define SD_TYPE_CODE_X_READ_C_A              (0xF << 8)
 
+/* When System */
+#define SD_TYPE_SYS_TSS_AVAILABLE            (0x9 << 8)
+
 #define SD_DESCRIPTOR_TYPE_SYSTEM            0          // default
 #define SD_DESCRIPTOR_TYPE_CODE_OR_DATA      (1 << 12)
 
@@ -88,3 +91,12 @@ SD_TYPE:
 #define SD_R3_DATA \
     SD_TYPE_DATA_READ_WRITE | SD_DESCRIPTOR_TYPE_CODE_OR_DATA | \
     SD_RING3 | SD_PRESENT | SD_32BIT | SD_4K_GRAN
+
+#define SD_TSS \
+    SD_TYPE_SYS_TSS_AVAILABLE | SD_DESCRIPTOR_TYPE_SYSTEM | \
+    SD_RING0 | SD_PRESENT | SD_32BIT
+
+#define SEGMENT_R0_CODE (1 * 8 | 0)
+#define SEGMENT_R0_DATA (2 * 8 | 0)
+#define SEGMENT_R3_CODE (3 * 8 | 3)
+#define SEGMENT_R3_DATA (4 * 8 | 3)

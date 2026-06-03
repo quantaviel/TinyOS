@@ -43,4 +43,20 @@ void enable_interrupts() {
     asm volatile ("sti" ::: "memory");
 }
 
+void switch_cr3(uint32_t page_dir_addr) {
+    page_dir_addr &= 0xFFFFF000;
+    asm volatile (
+        "movl %0, %%cr3"
+        :
+        : "r"(page_dir_addr)
+        : "memory"
+    );
+}
+
+auto get_esp() -> uint32_t {
+    uint32_t esp;
+    asm volatile ("movl %%esp, %0" : "=r"(esp));
+    return esp;
+}
+
 } // namespace cpu

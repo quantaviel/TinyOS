@@ -36,11 +36,6 @@ void timer_tick_handler(int_frame* frame) {
             curr->expires--;
 
             if (curr->expires == 0) {
-                // Fire the callback
-                if (curr->callback) {
-                    curr->callback(curr->arg);
-                }
-
                 switch (curr->mode) {
                     case TIMER_ONESHOT: // oneshot mode - deactivate
                         curr->active = false;
@@ -49,6 +44,12 @@ void timer_tick_handler(int_frame* frame) {
                         curr->expires = curr->initial_count;
                         break;
                 }
+                
+                // Fire the callback
+                if (curr->callback) {
+                    curr->callback(curr->arg);
+                }
+
             }
         }
         node = node->next;
@@ -177,15 +178,13 @@ timer_event* register_event(
     event->active = true;
 
     if (unit == TIMER_SEC) {
-        // Convert seconds to jiffies
+        // Convert seconds to ticks
         event->initial_count = sec_to_ticks(count);
     } else {
-        // count is already in jiffies (TIMER_TICK = 1 jiffy)
+        // count is already in ticks
         event->initial_count = count;
     }
     event->expires = event->initial_count;
-
-    fmt::println("inital_count: {}", event->initial_count);
 
     // Add to list
     lock();

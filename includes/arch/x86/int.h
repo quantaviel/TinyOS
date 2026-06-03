@@ -23,6 +23,8 @@
 #define IRQ_VECTOR_VIRTUALIZATION         20
 #define IRQ_VECTOR_CONTROL_PROTECTION     21
 
+#define IRQ_VECTOR_SYSTEM_CALLS           128
+
 #define IRQ_VECTOR_LAPIC_ERROR            200
 #define IRQ_VECTOR_LAPIC_LINT0            201
 #define IRQ_VECTOR_LAPIC_SPURIOUS         202
@@ -72,6 +74,7 @@ void _asm_isr_18();
 void _asm_isr_19();
 void _asm_isr_20();
 void _asm_isr_21();
+void _asm_isr_128();
 void _asm_isr_200();
 void _asm_isr_201();
 void _asm_isr_202();

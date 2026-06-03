@@ -22,11 +22,12 @@ auto get_scancode() -> unsigned char {
 void keyboard_handler(int_frame* frame) {
     apic::eoi();
     unsigned char ch = get_scancode();
-    if (curr_buf_size == BUFFER_SIZE) // Buffer is full, dropout it.
-        return;
-    tail = (tail + 1) % BUFFER_SIZE;
-    curr_buf_size += 1; // !!! maybe concurency problem !!!
-    kb_buf[tail] = ch;
+    // if (curr_buf_size == BUFFER_SIZE) // Buffer is full, dropout it.
+    //     return;
+    // tail = (tail + 1) % BUFFER_SIZE;
+    // curr_buf_size += 1; // !!! maybe concurency problem !!!
+    // kb_buf[tail] = ch;
+    fmt::println("Pressed! {x}", ch);
 }
 
 void init() {

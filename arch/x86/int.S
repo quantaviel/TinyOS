@@ -36,6 +36,8 @@ isr_template IRQ_VECTOR_SIMD_FP_EXCEPTION, no_error_code=1
 isr_template IRQ_VECTOR_VIRTUALIZATION, no_error_code=1
 isr_template IRQ_VECTOR_CONTROL_PROTECTION, no_error_code=1
 
+isr_template IRQ_VECTOR_SYSTEM_CALLS
+
 isr_template IRQ_VECTOR_LAPIC_ERROR
 isr_template IRQ_VECTOR_LAPIC_LINT0
 isr_template IRQ_VECTOR_LAPIC_SPURIOUS
@@ -59,25 +61,9 @@ interrupt_wrapper:
     subl $16, %esp
     movl %eax, (%esp)
 
-    // pushw %ds
-    // pushw %es
-    // pushw %fs
-    // pushw %gs
-
-    // movw $10, %ax
-    // movw %ax, %ds
-    // movw %ax, %es
-    // movw %ax, %fs
-    // movw %ax, %gs
-
     call int_handler
 
     popl %esp
-
-    // popw %gs
-    // popw %fs
-    // popw %es
-    // popw %ds
 
     popl %eax
     popl %ebx

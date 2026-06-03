@@ -51,6 +51,8 @@ void idt_init() {
     idt_set_entry(IRQ_VECTOR_VIRTUALIZATION, (uint32_t)_asm_isr_20, 0x08, IDT_INT_GATE, IDT_RING0);
     idt_set_entry(IRQ_VECTOR_CONTROL_PROTECTION, (uint32_t)_asm_isr_21, 0x08, IDT_INT_GATE, IDT_RING0);
 
+    idt_set_entry(IRQ_VECTOR_SYSTEM_CALLS, (uint32_t)_asm_isr_128, 0x08, IDT_TRAP_GATE, IDT_RING3);
+
     idt_set_entry(IRQ_VECTOR_LAPIC_ERROR, (uint32_t)_asm_isr_200, 0x08, IDT_INT_GATE, IDT_RING0);
     idt_set_entry(IRQ_VECTOR_LAPIC_LINT0, (uint32_t)_asm_isr_201, 0x08, IDT_INT_GATE, IDT_RING0);
     idt_set_entry(IRQ_VECTOR_LAPIC_SPURIOUS, (uint32_t)_asm_isr_202, 0x08, IDT_INT_GATE, IDT_RING0);

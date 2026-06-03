@@ -11,6 +11,8 @@ extern uint32_t __prologue_end;
 extern uint32_t __kernel_start;
 extern uint32_t __kernel_end;
 extern uint32_t __kernel_heap_start;
+extern uint32_t __vmm_bitmap_start;
+extern uint32_t __vmm_bitmap_end;
 extern uint32_t _k_ptd;
 
 #define sys_val(x)                  (uint32_t)(&(x))
@@ -18,6 +20,8 @@ extern uint32_t _k_ptd;
 #define KERNEL_START                (sys_val(__kernel_start))
 #define KERNEL_END                  (sys_val(__kernel_end))
 #define KERNEL_HEAP_START           (sys_val(__kernel_heap_start))
+#define KERNEL_BITMAP_START         (sys_val(__vmm_bitmap_start))
+#define KERNEL_BITMAP_END           (sys_val(__vmm_bitmap_end))
 
 #define KERNEL_STACK_START          (0xFFBFFFFF)
 #define KERNEL_STACK_SIZE           (1 * 1024 * 1024)
@@ -39,6 +43,9 @@ extern uint32_t _k_ptd;
 #define PDE_INDEX(phy_addr)         (((phy_addr) & 0xFFC00000) >> 22)
 #define PTE_INDEX(phy_addr)         (((phy_addr) & 0x003FF000) >> 12)
 #define PTE_COUNT 1024
+
+#define PD_VADDR                    ((0xFFFFF000))
+#define PT_BASE_VADDR               ((0xFFC00000))
 
 typedef uint32_t ptd_t;
 typedef uint32_t pt_t;

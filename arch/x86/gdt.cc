@@ -1,6 +1,9 @@
 #include <arch/x86/gdt.h>
+#include <arch/x86/tss.h>
 
-constexpr int GDT_ENTRY_SIZE = 5;
+constexpr int GDT_ENTRY_SIZE = 6;
+
+extern tss global_tss;
 
 uint64_t gdt[GDT_ENTRY_SIZE];
 uint32_t gdt_limit = sizeof(gdt);
@@ -28,6 +31,7 @@ void gdt_init() {
     set_gdt_entry(2, 0, 0xFFFFF, SD_R0_DATA);
     set_gdt_entry(3, 0, 0xFFFFF, SD_R3_CODE);
     set_gdt_entry(4, 0, 0xFFFFF, SD_R3_DATA);
+    set_gdt_entry(5, (uint32_t)&global_tss, sizeof(global_tss) - 1, SD_TSS);
 
     gdtr_t gdtr;
     gdtr.limit = gdt_limit;

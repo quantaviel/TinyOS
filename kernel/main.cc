@@ -1,15 +1,19 @@
 #include <arch/x86/multiboot.h>
 #include <arch/x86/iroute.h>
+#include <arch/x86/tss.h>
 #include <klib/fmt.h>
 #include <hal/acpi/acpi.h>
 #include <hal/apic.h>
 #include <hal/cpu.h>
 #include <hal/ioapic.h>
 #include <hal/keyboard.h>
-#include <timer.h>
+#include <mm/page.h>
 #include <mm/pmm.h>
 #include <mm/kalloc.h>
+#include <proc.h>
+#include <timer.h>
 #include <vga.h>
+#include <sys_call.h>
 
 /**
  * functions called in assembly should use
@@ -19,6 +23,7 @@
 
 
 void memory_init(multiboot_info_t* mbi);
+extern "C" void kernel_main();
 
 extern "C"
 void kernel_init(multiboot_info* mb_info) {
@@ -62,6 +67,7 @@ void kernel_init(multiboot_info* mb_info) {
 // mark and map necessary memory
 void memory_init(multiboot_info_t* mbi) {
     mm::pmm::init(mbi);
+    mm::vmm::bitmap_init(KERNEL_BITMAP_START, KERNEL_BITMAP_END);
     // unmark available memory
     auto mmap_p = (uint8_t *)mbi->mmap_addr;
     for (; (uintptr_t) mmap_p < mbi->mmap_addr + mbi->mmap_length; ) {
@@ -103,6 +109,8 @@ void memory_init(multiboot_info_t* mbi) {
     vga::set_addr(vga::VGA_VIR_ADDR);
 }
 
+void main();
+
 int global_var = 0;
 extern "C"
 void kernel_main() {
@@ -132,12 +140,33 @@ void kernel_main() {
 
     // int count = 0;
     // auto sec_event = timer::register_event(
-    //     1, timer::TIMER_PERIODIC, timer::TIMER_SEC,
-    //     [](void* arg) { fmt::println("Second! {}\r", *(int*)arg); ++*(int*)arg; }, &count
+    //     2048, timer::TIMER_PERIODIC, timer::TIMER_SEC,
+    //     [](void* arg) { fmt::println("Second! {}\n", *(int*)arg); ++*(int*)arg; }, &count
     // );
+    init_tss();
+    syscall_init();
+    proc::init((uint32_t)main);
 
 
     while (1) {
         // Idle loop
     }
+}
+
+void main() {
+    int volatile x = fork();
+    if (x == 0) {
+        int y = fork();
+        if (y != 0) {
+            while (1) write(1, "B", 1);
+        } else {
+            while (1) write(1, "C", 1);
+        }
+    } else {
+        char str[] = "A";
+        while (1) {
+            write(1, str, sizeof(str) - 1);
+        }
+    }
+    while (1);
 }

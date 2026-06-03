@@ -42,6 +42,7 @@ $(BINTARGET): $(OBJECTS) $(LINK_SCRIPT)
 	$(LD) -T $(LINK_SCRIPT) -o $@ $(OBJECTS)
 
 $(OS): $(BINTARGET)
+	@objdump -d $(BINTARGET) > build/kernel_dump.txt
 # check if TARGET is x86 multiboot
 	@if grub-file --is-x86-multiboot $(BINTARGET); then \
 		echo "multiboot confirmed"; \
@@ -56,10 +57,11 @@ $(OS): $(BINTARGET)
 	@printf "}\n" >> $(BUILD_DIR)/iso/boot/grub/grub.cfg
 	@cp $(BINTARGET) $(BUILD_DIR)/iso/boot/$(NAME).bin
 	@grub-mkrescue -o $(OS) $(BUILD_DIR)/iso
-	@objdump -d $(BINTARGET) > build/kernel_dump.txt
+
+
 
 run: all
-	@$(QEMU) -cdrom $(OS) -m 2G
+	@$(QEMU) -cdrom $(OS) -m 2G -d int,cpu_reset -D qemu.log
 #   -trace apic* -D qemu.log 
 
 debug: all

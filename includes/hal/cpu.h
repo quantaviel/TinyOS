@@ -45,4 +45,7 @@ void enable_interrupts();
 void read_msr(uint32_t msr, uint32_t* low, uint32_t* high);
 void write_msr(uint32_t msr, uint32_t low, uint32_t high);
 
+void switch_cr3(uint32_t page_dir_addr);
+auto get_esp() -> uint32_t;
+
 } // namespace cpu

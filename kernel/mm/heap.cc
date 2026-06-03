@@ -160,13 +160,10 @@ bool kheap::extend(size_t size) {
 
     // create new free chunk
     uint32_t *new_chunk_header = (uint32_t *)(old_end);
-    uint32_t new_chunk_size = extend_size + WSIZE; // include old epilogue
+    uint32_t new_chunk_size = extend_size; // include old epilogue
     uint32_t *new_chunk_footer = (uint32_t *)(this->end - WSIZE);
     *new_chunk_header = CHUNK(new_chunk_size, CHUNK_PREV_USED(old_epilogue), 0);
     *new_chunk_footer = CHUNK(new_chunk_size, CHUNK_PREV_USED(old_epilogue), 0);
-
-    // update old epilogue to new chunk header
-    *(uint32_t *)(old_end - WSIZE) = *new_chunk_header;
 
     // create new epilogue
     uint32_t *epilogue = (uint32_t *)(this->end);

@@ -1,7 +1,14 @@
 #include <arch/x86/int.h>
 #include <arch/x86/iroute.h>
+
 #include <hal/apic.h>
+
+#include <mm/vmm.h>
+#include <mm/pmm.h>
+#include <mm/kalloc.h>
+
 #include <klib/fmt.h>
+#include <klib/string.h>
 
 void
 __print_panic_msg(const char *msg, const int_frame *frame) {
@@ -88,6 +95,62 @@ void inter_general_protection(int_frame *frame) {
 void inter_page_fault(int_frame *frame) {
     uint32_t cr2;
     asm volatile("mov %%cr2, %0" : "=r"(cr2));
+    uint32_t vaddr = cr2;
+    if (!(frame->error_code & 1) || vaddr >= 0xF0000000) { // page doesn't present
+        goto bad_area;
+    }
+    if (frame->error_code & 2) { // page is read only: COW
+        vaddr &= 0xFFFFF000;
+        uintptr_t paddr = mm::pt::translate(vaddr);
+        uint32_t refcount = mm::pmm::get_refcount(paddr);
+        
+        // page about declaration
+        uint32_t* page_dir = (uint32_t*)PD_VADDR;
+        uint32_t& pde = page_dir[vaddr >> 22];
+        uint32_t page_table_index = (vaddr >> 22) << 12;
+        uint32_t* page_table = (uint32_t*)(PT_BASE_VADDR + page_table_index);
+        uint32_t& pte = page_table[(vaddr >> 12) & 0x3FF];
+        uint32_t pde_attr = pde & 0xFFF;
+        uint32_t pte_attr = pte & 0xFFF;
+
+        if (refcount == 1) {
+            pte |= PTE_READ_WRITE;
+            cpu::tlb_refresh(vaddr);
+            return;
+        }
+
+        mm::pmm::dec_refcount(paddr);
+
+        uintptr_t new_paddr = mm::pmm::alloc_page();
+        char *page_content = (char *)mm::kvm::kalloc(PAGE_SIZE);
+        for (int i = 0; i < PAGE_SIZE; ++i) {
+            page_content[i] = ((char *)vaddr)[i];
+        }
+
+        mm::pt::map(vaddr, new_paddr, pde_attr, pte_attr | PTE_READ_WRITE);
+        cpu::tlb_refresh(vaddr);
+        
+        // memcpy((void*)vaddr, page_content, PAGE_SIZE);
+        
+        for (int i = 0; i < PAGE_SIZE; ++i) {
+            ((char *)vaddr)[i] = page_content[i];
+        }
+        
+        mm::kvm::kfree(page_content);
+        
+        return;
+    }
+    if (frame->error_code & 4) { // dpl problem
+        // fmt::println("vaddr: {x}", vaddr);
+        uint32_t* page_dir = (uint32_t*)PD_VADDR;
+        page_dir[vaddr >> 22] |= PDE_USER_AVAL;
+        uint32_t page_table_index = (vaddr >> 22) << 12;
+        uint32_t* page_table = (uint32_t*)(PT_BASE_VADDR + page_table_index);
+        page_table[(vaddr >> 12) & 0x3FF] |= PTE_USER_AVAL;
+        cpu::tlb_refresh(vaddr);
+        return;
+    }
+bad_area:
     char buf[64];
     fmt::format(buf, "Paga Fault on {x}", cr2);
     __print_panic_msg(buf, frame);

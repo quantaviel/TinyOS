@@ -19,12 +19,17 @@ public:
 
     static void mark_pages(paddr_t paddr, size_t len);
     static void unmark_pages(paddr_t paddr, size_t len);
+    
+    static auto get_refcount(paddr_t paddr) -> int;
+    static void inc_refcount(paddr_t paddr);
+    static void dec_refcount(paddr_t paddr);
 private:
 
     static bool is_marked(paddr_t paddr);
 
     static constexpr unsigned BITMAP_SIZE = PAGE_MAX >> 3;
     static uint8_t bitmap[BITMAP_SIZE];
+    static uint8_t refcount[PAGE_MAX];
 };
 
 } // namespace mm
