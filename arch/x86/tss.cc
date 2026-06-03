@@ -3,7 +3,7 @@
 
 #include <klib/string.h>
 
-tss global_tss;
+tss_t global_tss;
 
 void init_tss() {
     memset(&global_tss, 0, sizeof(global_tss));

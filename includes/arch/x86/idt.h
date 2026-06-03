@@ -2,7 +2,7 @@
 
 #include <stdint-gcc.h>
 
-struct idt_desc {
+struct idt_desc_t {
     uint16_t offset_low;
     uint16_t selector;
     uint8_t zero;
@@ -10,7 +10,7 @@ struct idt_desc {
     uint16_t offset_high;
 } __attribute__((packed));
 
-struct idtr {
+struct idtr_t {
     uint16_t limit;
     uint32_t base;
 } __attribute__((packed));

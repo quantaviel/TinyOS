@@ -17,8 +17,6 @@ paddr_t translate(vaddr_t vaddr);
 
 bool map_to_page_dir(vaddr_t page_dir, vaddr_t vaddr, paddr_t paddr, uint32_t pde_flags, uint32_t pte_flags);
 
-paddr_t translate(vaddr_t page_dir, vaddr_t vaddr);
-
 vaddr_t get_temp_page();
 
 } // namespace pt

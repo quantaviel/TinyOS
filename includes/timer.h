@@ -17,8 +17,8 @@ enum timer_unit {
 };
 
 // Timer event structure
-struct timer_event {
-    list_node node; // Embedded list node (must be first)
+struct timer_event_t {
+    list_node_t node; // Embedded list node (must be first)
 
     uint32_t expires;         // Remaining ticks to fire
     uint32_t initial_count;   // Initial count (for reload)
@@ -38,7 +38,7 @@ uint32_t get_sys_freq();
 
 // Register a timer event
 // Returns the event pointer on success, nullptr on failure
-timer_event* register_event(
+timer_event_t* register_event(
     uint32_t count,
     timer_mode mode,
     timer_unit unit,
@@ -47,10 +47,10 @@ timer_event* register_event(
 );
 
 // Unregister a timer event
-void unregister_event(timer_event* event);
+void unregister_event(timer_event_t* event);
 
 // Reset an event's countdown to its initial count
-void reset_event(timer_event* event);
+void reset_event(timer_event_t* event);
 
 // Lock/unlock the timer list (for critical sections)
 void lock();

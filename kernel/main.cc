@@ -10,10 +10,10 @@
 #include <mm/page.h>
 #include <mm/pmm.h>
 #include <mm/kalloc.h>
-#include <proc.h>
+#include <process.h>
 #include <timer.h>
-#include <vga.h>
-#include <sys_call.h>
+#include <hal/vga.h>
+#include <syscall.h>
 
 /**
  * functions called in assembly should use

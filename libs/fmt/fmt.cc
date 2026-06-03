@@ -1,5 +1,5 @@
 #include <klib/fmt.h>
-#include <vga.h>
+#include <hal/vga.h>
 
 namespace fmt {
 

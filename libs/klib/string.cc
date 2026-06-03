@@ -1,4 +1,5 @@
 #include <klib/string.h>
+#include <klib/utils.h>
 
 #include <stdint-gcc.h>
 

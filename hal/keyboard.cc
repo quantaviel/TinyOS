@@ -7,32 +7,31 @@
 #include <hal/keyboard.h>
 
 #include <klib/fmt.h>
+#include <queue.h>
 
 namespace keyboard {
 
 #define SCANCODE_PORT 0x60
-#define BUFFER_SIZE 512
-static uint8_t kb_buf[512];
-static int head, tail, curr_buf_size;
+static CircularQueue<uint8_t, 512> kb_queue;
 
 auto get_scancode() -> unsigned char {
     return cpu::inb(SCANCODE_PORT);
 }
 
-void keyboard_handler(int_frame* frame) {
+void keyboard_handler(int_frame_t* frame) {
     apic::eoi();
     unsigned char ch = get_scancode();
-    // if (curr_buf_size == BUFFER_SIZE) // Buffer is full, dropout it.
-    //     return;
-    // tail = (tail + 1) % BUFFER_SIZE;
-    // curr_buf_size += 1; // !!! maybe concurency problem !!!
-    // kb_buf[tail] = ch;
-    fmt::println("Pressed! {x}", ch);
+    if (!kb_queue.push(ch)) {
+        fmt::println("Keyboard buffer full!");
+    }
+}
+
+bool read(uint8_t& scancode) {
+    return kb_queue.pop(scancode);
 }
 
 void init() {
-    head = 0, tail = BUFFER_SIZE - 1; curr_buf_size = 0;
-    iroute_reg(IRQ_VECTOR_KEYBORAD, keyboard_handler);
+    iroute_register(IRQ_VECTOR_KEYBORAD, keyboard_handler);
 }
 
 }

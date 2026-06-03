@@ -7,7 +7,7 @@
 
 
 // 注意小端序
-struct gdt_desc {
+struct gdt_desc_t {
     uint16_t seglim_l:   16;    // Segment limit low 16 bit
     uint16_t basel:      16;    // Base address low 16 bit
     uint8_t basem:       8;     // Base address middle 8 bit

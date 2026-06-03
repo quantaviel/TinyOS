@@ -2,7 +2,7 @@
 #include <arch/x86/gdt.h>
 #include <arch/x86/int.h>
 
-#include <proc.h>
+#include <process.h>
 
 #include <timer.h>
 
@@ -17,7 +17,7 @@
 #include <klib/string.h>
 #include <klib/fmt.h>
 
-extern tss global_tss;
+extern tss_t global_tss;
 extern uint32_t __user_code_start;
 extern uint32_t __user_code_end;
 
@@ -38,13 +38,13 @@ void append_ready_queue(pcb* proc) {
         ready_queue_head = ready_queue_tail = proc;
         return;
     }
-    ready_queue_tail->next = proc;
+    ready_queue_tail->next_proc = proc;
     ready_queue_tail = proc;
 }
 
 void pop_ready_queue() {
     if (ready_queue_head == nullptr) return;
-    ready_queue_head = ready_queue_head->next;
+    ready_queue_head = ready_queue_head->next_proc;
 }
 
 static pcb kernel_main_pcb;
@@ -62,7 +62,7 @@ void pid_mark(pid_t pid) {
     pid_bitmap[pid >> 3] |= (1 << (pid & 7));
 }
 
-void pid_unmakr(pid_t pid) {
+void pid_unmark(pid_t pid) {
     pid_bitmap[pid >> 3] &= ~(1 << (pid & 7));
 }
 
@@ -182,7 +182,7 @@ pcb* create_process(uint32_t entry, const char* name) {
 
     new_pcb->pid = 1;
     pid_mark(1);
-    new_pcb->proc_stat = READY;
+    new_pcb->state = PROC_READY;
     new_pcb->priority = 100;
     strcpy(new_pcb->name, name);
 
@@ -217,7 +217,7 @@ pcb* create_process(uint32_t entry, const char* name) {
     PUSH(0); // esi
 #undef PUSH
 
-    new_pcb->kesp = (uint32_t)v_stack;
+    new_pcb->kernel_stack_ptr = (uint32_t)v_stack;
 
     // Unmap temporal map for new process cr3
     mm::pt::unmap(cr3);
@@ -258,11 +258,11 @@ void schedule() {
         return;
     }
 
-    current_pcb->proc_stat = READY;
+    current_pcb->state = PROC_READY;
     
     current_pcb = ready_queue_head;
     current_pcb->remaining = current_pcb->priority;
-    current_pcb->proc_stat = RUNNING;
+    current_pcb->state = PROC_RUNNING;
 
     pop_ready_queue();
 
@@ -278,7 +278,7 @@ void proc_timer_handler(void *) {
     }
 }
 
-pid_t sys_fork(int_frame* frame) {
+pid_t sys_fork(int_frame_t* frame) {
     uintptr_t sub_pcb_addr_phy = mm::pmm::alloc_page();
     uintptr_t sub_pcb_addr_vir = mm::vmm::alloc_bit_page();
 
@@ -303,9 +303,9 @@ pid_t sys_fork(int_frame* frame) {
     memcpy(sub_pcb, current_pcb, PAGE_SIZE);
     
     sub_pcb->pid = sub_pid;
-    sub_pcb->parent = current_pcb;
+    sub_pcb->parent_proc = current_pcb;
     sub_pcb->priority = 100;
-    sub_pcb->proc_stat = READY;
+    sub_pcb->state = PROC_READY;
     strcpy(sub_pcb->name, "sub process");
 
     
@@ -313,7 +313,7 @@ pid_t sys_fork(int_frame* frame) {
     sub_pcb->cr3 = copy_page_dir(sub_cr3);
     
     uint32_t offset = (uint32_t)frame - (uint32_t)current_pcb;
-    int_frame* sub_frame = (int_frame*)(sub_pcb_addr_vir + offset);
+    int_frame_t* sub_frame = (int_frame_t*)(sub_pcb_addr_vir + offset);
     sub_frame->gp.eax = 0;
     
     uint32_t* sub_esp = (uint32_t*)sub_frame;
@@ -326,7 +326,7 @@ pid_t sys_fork(int_frame* frame) {
     --sub_esp; *sub_esp = sub_frame->gp.ebx;
     --sub_esp; *sub_esp = sub_frame->gp.ebp;
 
-    sub_pcb->kesp = (uint32_t)sub_esp;
+    sub_pcb->kernel_stack_ptr = (uint32_t)sub_esp;
 
     append_ready_queue(sub_pcb);
     

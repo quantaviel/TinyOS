@@ -2,7 +2,7 @@
 
 #include <arch/x86/multiboot.h>
 #include <hal/cpu.h>
-#include <vga.h>
+#include <hal/vga.h>
 #include <mm/page.h>
 
 #include <stdint-gcc.h>

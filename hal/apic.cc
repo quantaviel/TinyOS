@@ -35,7 +35,7 @@ void init() {
 
     // Timer test removed - now handled by timer::init()
     static int test_handled = 0;
-    iroute_reg(LAPIC_LVT_TIMER_VEC, [](int_frame* frame) {
+    iroute_register(LAPIC_LVT_TIMER_VEC, [](int_frame_t* frame) {
         fmt::println("LAPIC Timer Interrupt received.");
         test_handled = 1;
         apic::eoi();
@@ -68,10 +68,10 @@ void set_base_addr(uintptr_t addr) {
     cpu::write_msr(IA32_APIC_BASE_MSR, low, high);
 }
 
-void set_apic_timer(uint32_t option, void (func)(int_frame*), uint32_t divide, uint32_t count) {
+void set_apic_timer(uint32_t option, void (func)(int_frame_t*), uint32_t divide, uint32_t count) {
     cpu::disable_interrupts();
     
-    iroute_reg(LAPIC_LVT_TIMER_VEC, func);
+    iroute_register(LAPIC_LVT_TIMER_VEC, func);
     write_reg(LAPIC_LVT_TIMER, option | LAPIC_LVT_TIMER_VEC);
     write_reg(LAPIC_DIVIDE_CONF, divide);
     write_reg(LAPIC_INIT_COUNT, count);

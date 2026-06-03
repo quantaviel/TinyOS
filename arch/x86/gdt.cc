@@ -3,7 +3,7 @@
 
 constexpr int GDT_ENTRY_SIZE = 6;
 
-extern tss global_tss;
+extern tss_t global_tss;
 
 uint64_t gdt[GDT_ENTRY_SIZE];
 uint32_t gdt_limit = sizeof(gdt);

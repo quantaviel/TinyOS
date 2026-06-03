@@ -103,7 +103,7 @@ option: `LAPIC_TIMER_ONE_SHOT` or `LAPIC_TIMER_PERIODIC` or `LAPIC_TIMER_TSC_DDL
 divide: `LAPIC_TIMER_DIVIDE_1` to `LAPIC_TIMER_DIVIDE_128`
 count: after the `count` times, `func` will be executed
 */
-void set_apic_timer(uint32_t option, void (func)(int_frame*), uint32_t divide, uint32_t count);
+void set_apic_timer(uint32_t option, void (func)(int_frame_t*), uint32_t divide, uint32_t count);
 
 // Get Local APIC ID
 static inline int get_id() {

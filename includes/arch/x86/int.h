@@ -38,7 +38,7 @@
 
 #include <hal/cpu.h>
 
-struct int_frame {
+struct int_frame_t {
     cpu::gp_regs gp;
 
     unsigned int_vec;

@@ -2,7 +2,7 @@
 #include <mm/page.h>
 #include <mm/pmm.h>
 
-#include <vga.h>
+#include <hal/vga.h>
 
 #include <stdint-gcc.h>
 

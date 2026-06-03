@@ -4,7 +4,7 @@
 
 #include <stddef.h>
 #include <stdint-gcc.h>
-#include <vga.h>
+#include <hal/vga.h>
 
 namespace fmt {
 

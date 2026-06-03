@@ -20,7 +20,7 @@
 
 #define RTC_TIMER_HZ    1024
 
-typedef struct rtc_time {
+typedef struct rtc_time_t {
     uint8_t  sec;
     uint8_t  min;
     uint8_t  hour;

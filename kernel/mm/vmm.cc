@@ -112,10 +112,6 @@ bool map_to_page_dir(vaddr_t page_dir, vaddr_t va, paddr_t pa, uint32_t pde_flag
     return true;
 }
 
-paddr_t translate(vaddr_t page_dir, vaddr_t vaddr) {
-
-}
-
 vaddr_t get_temp_page() {
     vaddr_t vaddr = vmm::alloc_bit_page();
     paddr_t paddr = pmm::alloc_page();

@@ -8,7 +8,7 @@
 
 namespace timer {
 
-static list_node timer_list_head;  // Doubly-linked list head
+static list_node_t timer_list_head;  // Doubly-linked list head
 
 static uint32_t sys_freq_hz = 0;          // System frequency in Hz
 static uint32_t ticks_per_interrupt = 0;  // Ticks during one interrupt
@@ -27,11 +27,11 @@ void unlock() {
 
 // Timer tick handler - decrements all events
 extern "C"
-void timer_tick_handler(int_frame* frame) {
+void timer_tick_handler(int_frame_t* frame) {
     apic::eoi();
-    list_node* node = timer_list_head.next;
+    list_node_t* node = timer_list_head.next;
     while (node != &timer_list_head) {
-        timer_event* curr = reinterpret_cast<timer_event*>(node);
+        timer_event_t* curr = reinterpret_cast<timer_event_t*>(node);
         if (curr->active && curr->expires > 0) {
             curr->expires--;
 
@@ -58,12 +58,12 @@ void timer_tick_handler(int_frame* frame) {
 
 // RTC periodic interrupt handler - used during calibration
 extern "C"
-void rtc_calibration_handler(int_frame* frame) {
+void rtc_calibration_handler(int_frame_t* frame) {
     rtc_eoi();
     rtc_interrupt_count = rtc_interrupt_count + 1;
 }
 
-void apic_calibration_handler(int_frame* frame) {
+void apic_calibration_handler(int_frame_t* frame) {
     apic::eoi();
 }
 
@@ -85,7 +85,7 @@ void init(uint32_t sys_freq) {
     list_init(&timer_list_head);
 
     // Register the timer tick handler
-    iroute_reg(LAPIC_LVT_TIMER_VEC, timer_tick_handler);
+    iroute_register(LAPIC_LVT_TIMER_VEC, timer_tick_handler);
 
     // Set APIC timer to periodic mode
     // Fixed jiffy rate: jiffy_hz Hz (e.g. 100 Hz)
@@ -105,8 +105,8 @@ void calibrate(uint32_t sys_freq) {
     cpu::disable_interrupts();
 
     // Register RTC calibration handler before enabling RTC
-    iroute_reg(RTC_TIMER_IRQ, rtc_calibration_handler);
-    iroute_reg(LAPIC_LVT_TIMER_VEC, apic_calibration_handler);
+    iroute_register(RTC_TIMER_IRQ, rtc_calibration_handler);
+    iroute_register(LAPIC_LVT_TIMER_VEC, apic_calibration_handler);
 
     // Set APIC timer to periodic mode with maximum count
     // This ensures continuous counting throughout the calibration
@@ -153,7 +153,7 @@ static uint32_t sec_to_ticks(uint32_t seconds) {
 }
 
 // Register a new timer event
-timer_event* register_event(
+timer_event_t* register_event(
     uint32_t count,
     timer_mode mode,
     timer_unit unit,
@@ -165,7 +165,7 @@ timer_event* register_event(
     }
 
     // Allocate the event structure
-    timer_event* event = (timer_event*)mm::kvm::kalloc(sizeof(timer_event));
+    timer_event_t* event = (timer_event_t*)mm::kvm::kalloc(sizeof(timer_event_t));
     if (!event) {
         return nullptr;
     }
@@ -195,7 +195,7 @@ timer_event* register_event(
 }
 
 // Unregister a timer event
-void unregister_event(timer_event* event) {
+void unregister_event(timer_event_t* event) {
     if (!event) {
         return;
     }
@@ -209,7 +209,7 @@ void unregister_event(timer_event* event) {
 }
 
 // Reset an event's countdown
-void reset_event(timer_event* event) {
+void reset_event(timer_event_t* event) {
     if (!event) {
         return;
     }

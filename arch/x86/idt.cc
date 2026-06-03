@@ -15,7 +15,7 @@ void idt_set_entry(int index, uint32_t offset, uint32_t selector, uint32_t type,
 }
 
 void idt_load() {
-    idtr idt_ptr;
+    idtr_t idt_ptr;
     idt_ptr.limit = sizeof(idt) - 1;
     idt_ptr.base = (uint32_t)idt;
 

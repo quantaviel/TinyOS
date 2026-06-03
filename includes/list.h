@@ -4,10 +4,12 @@
 
 // Intrusive doubly-linked list node
 // Embed this at the start of your struct to make it listable
-struct list_node {
-    list_node* next;
-    list_node* prev;
+struct list_node_t {
+    list_node_t* next;
+    list_node_t* prev;
 };
+
+using list_node = list_node_t;
 
 // Initialize a list head
 inline void list_init(list_node* head) {

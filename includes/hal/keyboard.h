@@ -6,5 +6,6 @@
 namespace keyboard {
 
 void init();
-   
+bool read(uint8_t& scancode);
+
 } // namespace keyboard

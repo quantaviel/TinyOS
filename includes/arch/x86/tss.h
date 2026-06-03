@@ -2,7 +2,7 @@
 
 #include <stdint-gcc.h>
 
-struct tss {
+struct tss_t {
     uint32_t link; // Previous Task Link Field. Contains the Segment Selector for the TSS of the previous task.
     uint32_t esp0; // esp0, esp1, esp2: The Stack Pointers used to load the stack when a privilege level change occurs from a lower privilege level to a higher one.
     uint32_t ss0; // ss0, ss1, ss2: The Segment Selectors used to load the stack when a privilege level change occurs from a lower privilege level to a higher one.
@@ -24,4 +24,4 @@ struct tss {
     uint32_t ssp; // Shadow Stack Pointer.
 } __attribute__((packed));
 
-void init_tss();
+void init_tss(void);

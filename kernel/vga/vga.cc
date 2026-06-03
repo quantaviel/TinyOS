@@ -1,4 +1,4 @@
-#include <vga.h>
+#include <hal/vga.h>
 
 #include <hal/cpu.h>
 
