@@ -1,43 +1,52 @@
 #pragma once
 
 #include <stdint-gcc.h>
+#include <ds/list.h>
 #include <arch/x86/int.h>
+#include <fs/file.h>
 
 namespace proc {
 
-enum proc_status {
+enum proc_state {
     PROC_READY,
     PROC_BLOCKED,
     PROC_RUNNING,
-    PROC_ZOMBIE
+    PROC_ZOMBIE,
+    PROC_SYSTEM
 };
 
 using pid_t = int32_t;
 
 // process control block
-struct pcb_t {
+struct proc {
     uint32_t kernel_stack_ptr; // kernel stack pointer
 
     uintptr_t cr3; // process page directory address (phy)
 
     pid_t pid; // process id
-    proc_status state; // process status
-    uint32_t priority; // process priority
-    uint32_t remaining; // process remaining ticks
-
+    proc_state state; // process state
+    uint32_t quantum; // process quantum
+    uint32_t remaining; // process remaining quantums
 
     // process structure
-    pcb_t* parent_proc;
-    pcb_t* next_proc;
+    proc* parent_proc;
+
+    list_node_t ready_node;
+    list_node_t waiting_node;
 
     char name[20]; // process name
+    fs::file* fd_array[16];
 };
 
-using pcb = pcb_t;
-
+void schedule();
 auto sys_fork(int_frame_t* frame) -> pid_t;
 
 void init(uint32_t entry);
+
+auto get_current_proc() -> proc*;
+
+void append_ready_queue(proc* p);
+void remove_ready_queue(proc* p);
 
 
 } // namespace proc

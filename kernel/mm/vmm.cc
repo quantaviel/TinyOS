@@ -9,7 +9,6 @@ namespace pt {
 
 // About Page Table Map & Unmap
 
-#define PD_VADDR 0xFFFFF000;
 #define PT_VADDR(i) (0xFFC00000 | ((i) << PAGE_SHIFT))
 
 #define PAGE_ALIGN(addr) ((addr) & 0xFFFFF000)
@@ -51,7 +50,7 @@ bool unmap(vaddr_t va) {
 
     if (!(ptv[pti] & 1)) return false;
     ptv[pti] = 0;
-    if (!(ptv[pti] & PTE_DISABLE_CACHE)) cpu::tlb_refresh(va);
+    if (!(ptv[pti] & PTE_DISABLE_CACHE)) cpu::refresh_tlb(va);
     return true;
 }
 

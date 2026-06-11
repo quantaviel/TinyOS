@@ -1,4 +1,4 @@
-#include <timer.h>
+#include <core/timer.h>
 #include <arch/x86/iroute.h>
 #include <hal/apic.h>
 #include <hal/cpu.h>

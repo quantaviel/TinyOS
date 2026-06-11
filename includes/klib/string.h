@@ -12,3 +12,5 @@ auto memset(void *src, uint8_t v, size_t size) -> void*;
 auto strcpy(char *dst, const char* src) -> char*;
 
 auto strlen(const char* src) -> size_t;
+
+auto strcmp(const char *lhs, const char *rhs) -> int;

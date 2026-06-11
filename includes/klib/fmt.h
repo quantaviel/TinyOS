@@ -22,6 +22,12 @@ namespace fmt {
 
 template<typename T>
 void print_value(T value) {
+    if (value < 0) {
+        vga::putchar('-');
+        print_value(-value);
+        return;
+    }
+
     char buf[16];
     int length = 0;
 
@@ -49,7 +55,20 @@ void print_hex(T value) {
 }
 
 template<typename T>
+void print_hex(T value, int b) {
+    constexpr char hex[] = "0123456789ABCDEF";
+    vga::write("0x");
+    
+    for (int i = b - 1; i >= 0; --i) {
+        vga::putchar(hex[(value >> (i * 4)) & 0xF]);
+    }
+}
+
+template<typename T>
 void print_hex(T* value) { print_hex((uintptr_t)value); }
+
+template<typename T>
+void print_hex(T* value, int b) { print_hex((uintptr_t)value, b); }
 
 void print(const char* fmt);
 
@@ -62,9 +81,20 @@ void print(const char* fmt, T value, Rest... rest) {
             return;
         }
 
-        if (fmt[0] == '{' && fmt[1] == 'x' && fmt[2] == '}') {
-            print_hex(value);
+        if (fmt[0] == '{' && fmt[1] == 's' && fmt[2] == '}') {
+            print_value((const char*)value);
             print(fmt + 3, rest...);
+            return;
+        }
+
+        if (fmt[0] == '{' && fmt[1] == 'x') {
+            if (fmt[2] == '}') {
+                print_hex(value);
+                print(fmt + 3, rest...);
+            } else {
+                print_hex(value, fmt[2] - '0');
+                print(fmt + 4, rest...);
+            }
             return;
         }
 

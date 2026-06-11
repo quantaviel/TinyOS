@@ -2,6 +2,7 @@
 #include <arch/x86/iroute.h>
 #include <arch/x86/tss.h>
 #include <klib/fmt.h>
+#include <klib/string.h>
 #include <hal/acpi/acpi.h>
 #include <hal/apic.h>
 #include <hal/cpu.h>
@@ -10,10 +11,12 @@
 #include <mm/page.h>
 #include <mm/pmm.h>
 #include <mm/kalloc.h>
-#include <process.h>
-#include <timer.h>
+#include <core/process.h>
+#include <core/timer.h>
 #include <hal/vga.h>
-#include <syscall.h>
+#include <core/syscall.h>
+#include <driver/ata.h>
+#include <fs/fs.h>
 
 /**
  * functions called in assembly should use
@@ -132,7 +135,6 @@ void kernel_main() {
     }
     fmt::println("Allocated large chunk at {x}, size = {}", large_ptr, large_size);
     mm::kvm::kfree(large_ptr);
-
     // auto event = timer::register_event(
     //     1, timer::TIMER_PERIODIC, timer::TIMER_TICK,
     //     [](void* arg) { fmt::println("Tick!"); }, nullptr
@@ -145,27 +147,37 @@ void kernel_main() {
     // );
     init_tss();
     syscall_init();
+    fs::init();
     proc::init((uint32_t)main);
-
-
+    
+    // unreachable
     while (1) {
         // Idle loop
     }
 }
 
+void kernel_idel_function() {
+    while (1) {
+        cpu::halt();
+    }
+}
+
+
 void main() {
-    int volatile x = fork();
-    if (x == 0) {
-        int y = fork();
-        if (y != 0) {
-            while (1) write(1, "B", 1);
-        } else {
-            while (1) write(1, "C", 1);
-        }
-    } else {
-        char str[] = "A";
-        while (1) {
-            write(1, str, sizeof(str) - 1);
+    int fd = open("/bin/bash", O_RDWR | O_APPEND);
+    char buf[100];
+    int res = read(fd, buf, 100);
+    if (res >= 0) {
+        buf[res] = '\0';
+        write1(1, buf, res);
+        char writebuf[] = "Hello Disk World!";
+        write(fd, writebuf, strlen(writebuf));
+        close(fd);
+        fd = open("/bin/bash", O_RDWR | O_APPEND);
+        res = read(fd, buf, 100);
+        if (res >= 0) {
+            buf[res] = '\0';
+            write1(1, buf, res);
         }
     }
     while (1);

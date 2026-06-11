@@ -37,15 +37,30 @@ static inline auto inb(uint16_t port) -> uint8_t {
     return ret;
 }
 
+// 16位多字节搬运指令：从端口连续读入 data_count 个字 (Word) 到 buffer
+static inline void insw(uint16_t port, void* addr, uint32_t cnt) {
+    asm volatile("cld; rep insw" : "+D"(addr), "+c"(cnt) : "d"(port) : "memory");
+}
+
+// 16位多字节搬运指令：将 buffer 中 data_count 个字写入端口
+static inline void outsw(uint16_t port, const void* addr, uint32_t cnt) {
+    asm volatile("cld; rep outsw" : "+S"(addr), "+c"(cnt) : "d"(port) : "memory");
+}
+
 void pic_disable();
-void tlb_refresh(uintptr_t addr);
+void refresh_tlb(uintptr_t addr);
+void refresh_all_tlb();
 
 void disable_interrupts();
 void enable_interrupts();
 void read_msr(uint32_t msr, uint32_t* low, uint32_t* high);
 void write_msr(uint32_t msr, uint32_t low, uint32_t high);
 
-void switch_cr3(uint32_t page_dir_addr);
+void switch_page_dir(uint32_t page_dir_addr);
 auto get_esp() -> uint32_t;
+auto get_page_dir() -> uint32_t;
+void set_page_dir(uint32_t addr);
+
+void halt();
 
 } // namespace cpu

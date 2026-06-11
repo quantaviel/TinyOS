@@ -1,6 +1,10 @@
 #pragma once
 
 #include <stdint-gcc.h>
+#include <stddef.h>
+
+#define container_of(ptr, type, member) \
+    ((type*)((char*)ptr - offsetof(type, member)))
 
 // Intrusive doubly-linked list node
 // Embed this at the start of your struct to make it listable

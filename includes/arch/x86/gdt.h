@@ -5,20 +5,14 @@
     According to page 2908, the definition of Segment Descriptor.
 */
 
-
 // 注意小端序
 struct gdt_desc_t {
-    uint16_t seglim_l:   16;    // Segment limit low 16 bit
-    uint16_t basel:      16;    // Base address low 16 bit
-    uint8_t basem:       8;     // Base address middle 8 bit
-    uint8_t desctype:    1;     // Descriptor type
-    uint8_t dpl:         2;     // Descriptor privilege level
-    uint8_t present:     1;     // Segment present
-    uint16_t seglim_h:   16;    // Segment limit high 16 bit
-    uint8_t AVL:         1;     // Available for use by system software
-    uint8_t size:        1;     // Default operation size
-    uint8_t granularity: 1;
-    uint8_t baseh:       8;     // Base address high 8 bit
+    uint16_t limit_low;
+    uint16_t base_low;
+    uint8_t  base_mid;
+    uint8_t  access;
+    uint8_t  flags_limit;
+    uint8_t  base_high;
 } __attribute__((packed));
 
 struct gdtr_t {

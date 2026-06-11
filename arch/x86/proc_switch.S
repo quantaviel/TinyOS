@@ -1,4 +1,5 @@
 .global switch_to
+// switch_to(prev_pcb, next_pcb)
 switch_to:
     movl 4(%esp), %eax
     movl 8(%esp), %edx

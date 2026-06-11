@@ -2,9 +2,9 @@
 #include <arch/x86/gdt.h>
 #include <arch/x86/int.h>
 
-#include <process.h>
+#include <core/process.h>
 
-#include <timer.h>
+#include <core/timer.h>
 
 #include <hal/cpu.h>
 #include <hal/apic.h>
@@ -18,37 +18,38 @@
 #include <klib/fmt.h>
 
 extern tss_t global_tss;
-extern uint32_t __user_code_start;
-extern uint32_t __user_code_end;
-
-#define USER_CODE_START     sys_val(__user_code_start)
-#define USER_CODE_END       sys_val(__user_code_end)
-
-#define PROCESS_KERNEL_STACK(pcb_p) ((uint32_t)(pcb_p) + PAGE_SIZE)
 
 namespace proc {
 
+#define PROCESS_KERNEL_STACK(p) ((uint32_t)(p) + PAGE_SIZE)
+
 using mm::kvm;
 
-static pcb* ready_queue_head = nullptr;
-static pcb* ready_queue_tail = nullptr;
+static list_node ready_queue_head;
 
-void append_ready_queue(pcb* proc) {
-    if (ready_queue_head == ready_queue_tail && ready_queue_head == nullptr) {
-        ready_queue_head = ready_queue_tail = proc;
-        return;
-    }
-    ready_queue_tail->next_proc = proc;
-    ready_queue_tail = proc;
+void append_ready_queue(proc* proc) {
+    list_push_back(&ready_queue_head, &proc->ready_node);
 }
 
-void pop_ready_queue() {
-    if (ready_queue_head == nullptr) return;
-    ready_queue_head = ready_queue_head->next_proc;
+void remove_ready_queue(proc* proc) {
+    list_remove(&proc->ready_node);
 }
 
-static pcb kernel_main_pcb;
-static pcb* current_pcb = nullptr;
+void popfront_ready_queue() {
+    if (!list_empty(&ready_queue_head))
+        list_remove(ready_queue_head.next);
+}
+
+proc* front_ready_queue() {
+    if (list_empty(&ready_queue_head)) return nullptr;
+    list_node* f = ready_queue_head.next;
+    proc* front_pcb = container_of(f, proc, ready_node);
+    return front_pcb;
+}
+
+proc kernel_main_pcb;
+proc idel_pcb;
+proc* current_pcb = nullptr;
 
 constexpr uint32_t user_stack_size = 0x1000;
 constexpr uintptr_t user_stack_start = 0xBFFFFFFF;
@@ -56,7 +57,7 @@ constexpr uint32_t PID_BITMAP_SIZE = 4096;
 static uint8_t pid_bitmap[4096];
 
 extern "C"
-void switch_to(pcb* prev, pcb* curr);
+void switch_to(proc* prev, proc* curr);
 
 void pid_mark(pid_t pid) {
     pid_bitmap[pid >> 3] |= (1 << (pid & 7));
@@ -129,14 +130,12 @@ auto copy_page_dir(uint32_t& cr3_vir) -> uintptr_t {
     cr3_vir = new_page_dir_vir;
     
     // refresh all tlb
-    uintptr_t current_cr3;
-    asm volatile("mov %%cr3, %0" : "=r"(current_cr3));
-    asm volatile("mov %0, %%cr3" :: "r"(current_cr3) : "memory");
+    cpu::refresh_all_tlb();
     
     return new_page_dir_phy;
 }
 
-void free_proc_page(pcb* process) {
+void free_proc_page(proc* process) {
     /// TODO: free page memory with die process
 }
 
@@ -151,14 +150,12 @@ __attribute__((naked)) void process_start_wrapper() {
         "popl %ebp;"  // 对应 gp_regs.ebp
         "popl %esi;"  // 对应 gp_regs.esi
         "addl $12, %esp;"
-    );
-    asm volatile (
         "iret;"
     );
 }
 
 // create process for first process
-pcb* create_process(uint32_t entry, const char* name) {
+proc* create_process(uint32_t entry, const char* name) {
     uintptr_t new_pcb_phy = mm::pmm::alloc_page();
     uintptr_t new_pcb_vir = mm::vmm::alloc_bit_page();
     uintptr_t new_ker_stack_phy = PROCESS_KERNEL_STACK(new_pcb_phy);
@@ -173,17 +170,15 @@ pcb* create_process(uint32_t entry, const char* name) {
 
     mm::pt::map(new_pcb_vir, new_pcb_phy, PDE_ATTR, PTE_ATTR);
     
-    pcb* new_pcb = (pcb*)new_pcb_vir;
+    proc* new_pcb = (proc*)new_pcb_vir;
 
     uintptr_t cr3;
-    
     new_pcb->cr3 = copy_page_dir(cr3);
     fmt::println("Copy page directory and page table. New page directory: {x}", new_pcb->cr3);
 
-    new_pcb->pid = 1;
-    pid_mark(1);
+    new_pcb->pid = get_available_pid();
     new_pcb->state = PROC_READY;
-    new_pcb->priority = 100;
+    new_pcb->quantum = 100;
     strcpy(new_pcb->name, name);
 
     fmt::println("Create user stack.");
@@ -230,41 +225,42 @@ void schedule();
 void proc_timer_handler(void*);
 
 void init(uint32_t entry) {
-    pcb* init_proc = create_process(entry, "init");
+    // set kernel main pcb
+    current_pcb = &kernel_main_pcb;
+    kernel_main_pcb.pid = 0; pid_mark(0);
+    kernel_main_pcb.state = PROC_SYSTEM;
+    kernel_main_pcb.cr3 = cpu::get_page_dir();
+
+    proc* init_proc = create_process(entry, "init");
+
+    list_init(&ready_queue_head);
     
     fmt::println("create init process.");
 
-    // set kernel main pcb
-    current_pcb = &kernel_main_pcb;
-    kernel_main_pcb.pid = 0;
-    pid_mark(0);
-    uintptr_t current_cr3 = 0;
-    asm volatile("movl %%cr3, %0": "=r"(current_cr3));
-    kernel_main_pcb.cr3 = current_cr3;
-
-    ready_queue_head = init_proc;
+    append_ready_queue(init_proc);
 
     timer::register_event(10, timer::TIMER_PERIODIC, timer::TIMER_TICK, proc_timer_handler, nullptr);
     
     schedule();
-    return;
 }
 
 void schedule() {
-    pcb* old_proc = current_pcb;
-    if (old_proc != &kernel_main_pcb) append_ready_queue(old_proc);
-    if (ready_queue_head == nullptr) {
-        current_pcb->remaining = current_pcb->priority;
-        return;
-    }
+    proc* old_proc = current_pcb;
 
-    current_pcb->state = PROC_READY;
-    
-    current_pcb = ready_queue_head;
-    current_pcb->remaining = current_pcb->priority;
+    switch (current_pcb->state) {
+        case PROC_RUNNING:
+            current_pcb->state = PROC_READY;
+            append_ready_queue(current_pcb);
+            break;
+        default:
+            break;
+    }
+        
+    current_pcb = front_ready_queue();
+    current_pcb->remaining = current_pcb->quantum;
     current_pcb->state = PROC_RUNNING;
 
-    pop_ready_queue();
+    popfront_ready_queue();
 
     global_tss.esp0 = PROCESS_KERNEL_STACK(current_pcb);
     switch_to(old_proc, current_pcb);
@@ -294,8 +290,8 @@ pid_t sys_fork(int_frame_t* frame) {
 
     mm::pt::map(sub_pcb_addr_vir, sub_pcb_addr_phy, PDE_ATTR, PTE_ATTR);
 
-    pcb* sub_pcb;
-    sub_pcb = (pcb* )sub_pcb_addr_vir;
+    proc* sub_pcb;
+    sub_pcb = (proc* )sub_pcb_addr_vir;
     pid_t sub_pid = get_available_pid();
     frame->eflags = (frame->eflags & ~(0x4000 | 0x100)) | 0x202;
     
@@ -304,7 +300,7 @@ pid_t sys_fork(int_frame_t* frame) {
     
     sub_pcb->pid = sub_pid;
     sub_pcb->parent_proc = current_pcb;
-    sub_pcb->priority = 100;
+    sub_pcb->quantum = 100;
     sub_pcb->state = PROC_READY;
     strcpy(sub_pcb->name, "sub process");
 
@@ -320,17 +316,22 @@ pid_t sys_fork(int_frame_t* frame) {
 
     --sub_esp; *sub_esp = (uint32_t)process_start_wrapper;
 
-    // push gps
-    --sub_esp; *sub_esp = sub_frame->gp.esi;
-    --sub_esp; *sub_esp = sub_frame->gp.edi;
-    --sub_esp; *sub_esp = sub_frame->gp.ebx;
-    --sub_esp; *sub_esp = sub_frame->gp.ebp;
+    // // push gps
+    --sub_esp; *sub_esp = 0;
+    --sub_esp; *sub_esp = 0;
+    --sub_esp; *sub_esp = 0;
+    --sub_esp; *sub_esp = 0;
 
     sub_pcb->kernel_stack_ptr = (uint32_t)sub_esp;
 
+    // append_ready_queue(sub_pcb);
     append_ready_queue(sub_pcb);
     
     return sub_pcb->pid;
+}
+
+auto get_current_proc() -> proc* {
+    return current_pcb;
 }
 
 } // namespace proc

@@ -49,7 +49,7 @@ struct int_frame_t {
     unsigned eflags;
     unsigned esp;
     unsigned ss;
-}__attribute__((packed));
+};
 
 extern "C" {
 void _asm_isr_0();

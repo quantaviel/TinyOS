@@ -14,6 +14,7 @@ ARCH:=ARCH_IA32
 
 BINTARGET:=$(BUILD_DIR)/$(NAME).bin
 OS:=$(BUILD_DIR)/$(NAME).iso
+DISK:=$(BUILD_DIR)/disk.img
 
 LINK_SCRIPT:=linker/linker.ld
 TOOLS_DIR:=/usr/local/i386elf/bin
@@ -28,7 +29,7 @@ QEMU_MON_PORT := 45454
 
 QEMU:=qemu-system-i386
 
-all: $(OS)
+all: $(OS) $(DISK)
 
 $(BUILD_DIR)/%.o: %.cc $(HEADERS)
 	mkdir -p $(dir $@)
@@ -58,15 +59,17 @@ $(OS): $(BINTARGET)
 	@cp $(BINTARGET) $(BUILD_DIR)/iso/boot/$(NAME).bin
 	@grub-mkrescue -o $(OS) $(BUILD_DIR)/iso
 
-
+$(DISK): mkfs/mkfs.py
+	python3 mkfs/mkfs.py
+	mv disk.img $(BUILD_DIR)/disk.img
 
 run: all
-	@$(QEMU) -cdrom $(OS) -m 2G -d int,cpu_reset -D qemu.log
+	@$(QEMU) -boot d -cdrom $(OS) -m 2G -drive file=$(DISK),format=raw,if=ide,index=0
 #   -trace apic* -D qemu.log 
 
 debug: all
 	@echo running
-	@$(QEMU) -s -S -m 2G -cdrom $(OS) -monitor telnet::$(QEMU_MON_PORT),server,nowait &
+	@$(QEMU) -s -S -m 2G -boot d -cdrom $(OS) -drive file=$(DISK),format=raw,if=ide,index=0 -monitor telnet::$(QEMU_MON_PORT),server,nowait &
 	@sleep 0.5
 	@echo ===QEMU_READY===
 	@telnet 127.0.0.1 $(QEMU_MON_PORT)

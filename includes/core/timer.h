@@ -2,7 +2,7 @@
 
 #include <stdint-gcc.h>
 #include <arch/x86/int.h>
-#include <list.h>
+#include <ds/list.h>
 
 namespace timer {
 

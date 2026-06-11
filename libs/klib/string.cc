@@ -42,3 +42,18 @@ auto strlen(const char* src) -> size_t {
     while (*src) ++src, ++len;
     return len;
 }
+
+auto strcmp(const char *lhs, const char *rhs) -> int {
+    while (*lhs && *rhs) {
+        if (*lhs != *rhs) {
+            if (*lhs > *rhs) return 1;
+            else return -1;
+        }
+        ++lhs;
+        ++rhs;
+    }
+
+    if (*lhs == '\0' && *rhs != '\0') return -1;
+    if (*rhs == '\0' && *lhs != '\0') return 1;
+    return 0;
+}

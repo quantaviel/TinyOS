@@ -115,7 +115,7 @@ void inter_page_fault(int_frame_t *frame) {
 
         if (refcount == 1) {
             pte |= PTE_READ_WRITE;
-            cpu::tlb_refresh(vaddr);
+            cpu::refresh_tlb(vaddr);
             return;
         }
 
@@ -128,7 +128,7 @@ void inter_page_fault(int_frame_t *frame) {
         }
 
         mm::pt::map(vaddr, new_paddr, pde_attr, pte_attr | PTE_READ_WRITE);
-        cpu::tlb_refresh(vaddr);
+        cpu::refresh_tlb(vaddr);
         
         // memcpy((void*)vaddr, page_content, PAGE_SIZE);
         
@@ -147,7 +147,7 @@ void inter_page_fault(int_frame_t *frame) {
         uint32_t page_table_index = (vaddr >> 22) << 12;
         uint32_t* page_table = (uint32_t*)(PT_BASE_VADDR + page_table_index);
         page_table[(vaddr >> 12) & 0x3FF] |= PTE_USER_AVAL;
-        cpu::tlb_refresh(vaddr);
+        cpu::refresh_tlb(vaddr);
         return;
     }
 bad_area:
