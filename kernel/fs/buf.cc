@@ -50,6 +50,7 @@ void release(buffer_head* buf) {
     if (buf->ref_count == 0) {
         list_remove(&buf->buf_list);
         list_push_front(&buffer_list_head, &buf->buf_list);
+        if (buf->flags & B_DIRTY) write_to_disk(buf);
     }
     // unlock
 }

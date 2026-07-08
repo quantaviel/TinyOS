@@ -164,21 +164,12 @@ void kernel_idel_function() {
 
 
 void main() {
-    int fd = open("/bin/bash", O_RDWR | O_APPEND);
-    char buf[100];
-    int res = read(fd, buf, 100);
-    if (res >= 0) {
-        buf[res] = '\0';
-        write1(1, buf, res);
-        char writebuf[] = "Hello Disk World!";
-        write(fd, writebuf, strlen(writebuf));
-        close(fd);
-        fd = open("/bin/bash", O_RDWR | O_APPEND);
-        res = read(fd, buf, 100);
-        if (res >= 0) {
-            buf[res] = '\0';
-            write1(1, buf, res);
-        }
+    write(STDOUT_FNO, "stdout test\n", 12);
+    int pid = fork();
+    if (pid == 0) {
+        write(STDOUT_FNO, "Sub Process!\n", 13);
+    } else {
+        write(STDOUT_FNO, "Parent Process!\n", 16);
     }
     while (1);
 }

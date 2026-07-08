@@ -17,7 +17,7 @@ static inode_hash bucket[INODE_HASH_SIZE];
 inode inode_pool[NINODE];
 list_node inode_list_head;
 
-extern super_block sb;
+super_block sb{0};
 
 constexpr uint32_t inode_count_per_block = 512 / sizeof(d_inode);
 
@@ -59,6 +59,7 @@ inode* iget(uint32_t dev, uint32_t inode_number) {
     
     curr_ip->i_mode = disk_inode->i_mode;
     curr_ip->i_size = disk_inode->i_size;
+    curr_ip->i_blocks = disk_inode->i_blocks;
     curr_ip->i_atime = disk_inode->i_atime;
     curr_ip->i_mtime = disk_inode->i_mtime;
     curr_ip->i_nlinks = disk_inode->i_nlinks;
@@ -104,6 +105,25 @@ void iput(inode* ip) {
         //     }
         // }
     }
+}
+
+int32_t inode_nr_alloc(uint32_t dev) {
+    buf::buffer_head* bh = buf::read(dev, sb.inode_bitmap_block);
+    uint8_t* inode_bitmap = (uint8_t*)bh->data;
+    for (int i = 0; i < FS_BLOCK_SIZE; ++i) {
+        if (inode_bitmap[i] != 0xFF) {
+            uint32_t bit = __builtin_ctz(~inode_bitmap[i]);
+            inode_bitmap[i] |= (1 << bit);
+
+            bh->flags |= B_DIRTY;
+            buf::release(bh);
+            
+            return i << 8 | bit;
+        }
+    }
+    // no available inode number
+    buf::release(bh);
+    return -1;
 }
 
 void inode_init() {

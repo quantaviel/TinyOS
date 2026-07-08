@@ -49,13 +49,14 @@ def read_super_block(f):
 
 def read_d_inode(f, inode_num, sb):
     """Read d_inode from disk"""
-    # Inodes are packed contiguously: offset = INODE_TABLE_BLK * BLOCK_SIZE + inode_num * 68
-    offset = sb['inode_table_block'] * FS_BLOCK_SIZE + inode_num * 68
+    # Inodes are packed contiguously: offset = INODE_TABLE_BLK * BLOCK_SIZE + inode_num * 128
+    INODE_SIZE = 128
+    offset = sb['inode_table_block'] * FS_BLOCK_SIZE + inode_num * INODE_SIZE
     f.seek(offset)
-    data = f.read(68)  # d_inode: 2+2+4+4+4+4+48 = 68 bytes
+    data = f.read(INODE_SIZE)  # d_inode: 128 bytes (with60 bytes padding)
     if len(data) < 68:
         return None
-    inode = struct.unpack("<2H4I12I", data)
+    inode = struct.unpack("<2H4I12I", data[:68])  # Only unpack first 68 bytes
     return {
         'i_mode': inode[0],
         'i_nlinks': inode[1],

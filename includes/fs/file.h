@@ -11,15 +11,27 @@
 
 namespace fs {
 
+struct file;
+
+struct file_operations {
+    int (*read) (file*, void*, size_t);
+    int (*write)(file*, const void*, size_t);
+};
+
 struct file {
     uint32_t f_mode;
     uint32_t f_count;
     uint32_t f_pos;
+    file_operations* f_ops;
 
     inode* f_inode;
 };
 
+extern file* default_tty;
+
 file* file_alloc();
 void file_free(file* f);
+void file_init();
+file* dup_file(file* f);
 
 } // namespace fs

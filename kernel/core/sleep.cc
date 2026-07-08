@@ -4,12 +4,11 @@
 namespace sleep {
 
 void sleep_event(waiting_queue* wq) {
-    proc::proc* current = proc::get_current_proc();
 
-    if (current->state == proc::PROC_BLOCKED) return;
-    current->state = proc::PROC_BLOCKED;
+    if (proc::current_pcb->state == proc::PROC_BLOCKED) return;
+    proc::current_pcb->state = proc::PROC_BLOCKED;
 
-    list_push_back(wq, &current->waiting_node);
+    list_push_back(wq, &proc::current_pcb->waiting_node);
 
     proc::schedule();
 }

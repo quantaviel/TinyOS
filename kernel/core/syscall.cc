@@ -8,6 +8,8 @@
 
 #include <klib/fmt.h>
 
+#include <fs/fs.h>
+
 #include <stdint-gcc.h>
 #include <stddef.h>
 
@@ -69,21 +71,10 @@ type name(type1 arg1, type2 arg2, type3 arg3) { \
 
 _syscall3(int32_t, read, int, fd, void*, buf, size_t, size);
 _syscall3(int32_t, write, int, fd, const void*, buf, size_t, size);
-_syscall3(int32_t, write1, int, fd, const void*, buf, size_t, size);
 _syscall0(proc::pid_t, fork);
 _syscall2(int32_t, open, const char*, path, int, flags);
 _syscall1(int32_t, close, int, fd);
-
-
-#include <core/sleep.h>
-#include <fs/fs.h>
-
-int32_t sys_write(int fd, const void* buf, size_t size) {
-    for (int i = 0; i < size; ++i) {
-        vga::putchar(((const char*)buf)[i]);
-    }
-    return size;
-}
+_syscall1(void, exit, int, status);
 
 void syscall_handler(int_frame_t* frame) {
     uint32_t call_numer = frame->gp.eax;
@@ -98,9 +89,6 @@ void syscall_handler(int_frame_t* frame) {
         case SYS_write:
             ret_value = fs::sys_write(arg1, (const void*)arg2, arg3);
             break;
-        case SYS_write1:
-            ret_value = sys_write(arg1, (const void *)arg2, arg3);
-            break;
         case SYS_fork:
             ret_value = proc::sys_fork(frame);
             break;
@@ -109,6 +97,9 @@ void syscall_handler(int_frame_t* frame) {
             break;
         case SYS_close:
             ret_value = fs::sys_close(arg1);
+            break;
+        case SYS_exit:
+            proc::sys_exit(arg1);
             break;
         default:
             break;

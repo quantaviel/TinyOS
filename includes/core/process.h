@@ -5,6 +5,8 @@
 #include <arch/x86/int.h>
 #include <fs/file.h>
 
+#define MAX_FD 16
+
 namespace proc {
 
 enum proc_state {
@@ -27,23 +29,27 @@ struct proc {
     proc_state state; // process state
     uint32_t quantum; // process quantum
     uint32_t remaining; // process remaining quantums
+    int32_t exit_status;
 
     // process structure
     proc* parent_proc;
+    proc* sub_proc;
+    proc* next_proc;
 
     list_node_t ready_node;
     list_node_t waiting_node;
 
     char name[20]; // process name
-    fs::file* fd_array[16];
+    fs::file* fd_array[MAX_FD];
 };
+
+extern proc* current_pcb;
 
 void schedule();
 auto sys_fork(int_frame_t* frame) -> pid_t;
+void sys_exit(int status);
 
 void init(uint32_t entry);
-
-auto get_current_proc() -> proc*;
 
 void append_ready_queue(proc* p);
 void remove_ready_queue(proc* p);

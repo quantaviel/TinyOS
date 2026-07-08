@@ -3,7 +3,6 @@
 #include <arch/x86/int.h>
 
 #include <core/process.h>
-
 #include <core/timer.h>
 
 #include <hal/cpu.h>
@@ -17,7 +16,8 @@
 #include <klib/string.h>
 #include <klib/fmt.h>
 
-extern tss_t global_tss;
+#include <fs/fs.h>
+#include <fs/file.h>
 
 namespace proc {
 
@@ -49,7 +49,7 @@ proc* front_ready_queue() {
 
 proc kernel_main_pcb;
 proc idel_pcb;
-proc* current_pcb = nullptr;
+proc* current_pcb{nullptr};
 
 constexpr uint32_t user_stack_size = 0x1000;
 constexpr uintptr_t user_stack_start = 0xBFFFFFFF;
@@ -180,6 +180,11 @@ proc* create_process(uint32_t entry, const char* name) {
     new_pcb->state = PROC_READY;
     new_pcb->quantum = 100;
     strcpy(new_pcb->name, name);
+    for (int i = 0; i < MAX_FD; ++i) new_pcb->fd_array[i] = nullptr;
+    new_pcb->fd_array[STDIN_FNO] = fs::dup_file(fs::default_tty);
+    new_pcb->fd_array[STDOUT_FNO] = fs::dup_file(fs::default_tty);
+    new_pcb->fd_array[STDERR_FNO] = fs::dup_file(fs::default_tty);
+    new_pcb->sub_proc = new_pcb->next_proc = new_pcb->parent_proc = nullptr;
 
     fmt::println("Create user stack.");
     uintptr_t user_stack = mm::pmm::alloc_page();
@@ -297,12 +302,31 @@ pid_t sys_fork(int_frame_t* frame) {
     
     frame->gp.eax = sub_pid;
     memcpy(sub_pcb, current_pcb, PAGE_SIZE);
+
+    auto insert = [](proc* parent, proc* sub) {
+        if (parent->sub_proc == nullptr) {
+            parent->sub_proc = sub;
+            return;
+        }
+        proc* iter = parent->sub_proc;
+        while (iter->next_proc != nullptr) {
+            iter = iter->next_proc;
+        }
+        iter->next_proc = sub;
+    };
     
     sub_pcb->pid = sub_pid;
     sub_pcb->parent_proc = current_pcb;
+    sub_pcb->sub_proc = sub_pcb->next_proc = nullptr;
+    insert(current_pcb, sub_pcb);
     sub_pcb->quantum = 100;
     sub_pcb->state = PROC_READY;
     strcpy(sub_pcb->name, "sub process");
+    for (int i = 0; i < MAX_FD; ++i) {
+        if (current_pcb->fd_array[i] != nullptr) {
+            sub_pcb->fd_array[i] = fs::dup_file(current_pcb->fd_array[i]);
+        }
+    }
 
     
     uintptr_t sub_cr3;
@@ -330,8 +354,13 @@ pid_t sys_fork(int_frame_t* frame) {
     return sub_pcb->pid;
 }
 
-auto get_current_proc() -> proc* {
+proc* get_current_proc() {
     return current_pcb;
+}
+
+void sys_exit(int status) {
+    current_pcb->exit_status = status;
+    current_pcb->state = PROC_ZOMBIE;
 }
 
 } // namespace proc

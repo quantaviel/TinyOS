@@ -73,20 +73,23 @@ with open(DISK_NAME, "r+b") as f:
 #📁 文件系统结构定义
 # ==========================================
 
-# inode 磁盘格式 (d_inode): 70 bytes
-# struct pack format: <2H4I12I = 2*2 + 4*4 + 12*4 = 4 + 16 + 48 = 68 bytes
-# 但 C 中 d_inode 是 70 bytes...实际验证: 2+2+4+4+4+4+48 = 68
-# 看来 mkfs.py 原版的 struct 是对的，只是注释说 70 是错的
+# inode 磁盘格式 (d_inode): 128 bytes (对齐到 128 便于管理)
+# struct pack format: <2H4I12I + 60 padding = 68 + 60 = 128 bytes
+# 512 / 128 = 4 个 inode 可以存放在一个块中
+
+INODE_SIZE = 128  # 每个 inode 的大小 (字节)
 
 def pack_inode(mode, nlinks, size, blocks, mtime, atime, zones):
-    """将 inode 属性打包为 68 字节的二进制"""
-    # <2H4I12I = 2 shorts + 4 ints + 12 ints = 18 items total
-    return struct.pack("<2H4I12I",
+    """将 inode 属性打包为 128 字节的二进制"""
+    # <2H4I12I = 2 shorts + 4 ints + 12 ints = 68 bytes
+    inode_data = struct.pack("<2H4I12I",
         mode, nlinks, size, blocks, mtime, atime,
         zones[0], zones[1], zones[2], zones[3],
         zones[4], zones[5], zones[6], zones[7],
         zones[8], zones[9], zones[10], zones[11]
     )
+    # 填充 padding 到 128 字节
+    return inode_data + b'\x00' * (INODE_SIZE - 68)
 
 def pack_dir_entry(inode_num, name):
     """将目录项打包为 64 字节的二进制"""
@@ -120,7 +123,7 @@ def mark_data_used(block_num):
 def write_inode(inode_num, mode, nlinks, size, blocks, mtime, atime, zones):
     """将 inode 写入磁盘的 inode 表中"""
     inode_data = pack_inode(mode, nlinks, size, blocks, mtime, atime, zones)
-    offset = INODE_TABLE_BLK * BLOCK_SIZE + inode_num * 68
+    offset = INODE_TABLE_BLK * BLOCK_SIZE + inode_num * INODE_SIZE
     with open(DISK_NAME, "r+b") as f:
         f.seek(offset)
         f.write(inode_data)
@@ -138,7 +141,7 @@ def write_dir_block(block_num, entries, inode_num):
 
     # 更新目录 inode 的 i_size
     dir_size = len(entries) * 64
-    inode_offset = INODE_TABLE_BLK * BLOCK_SIZE + inode_num * 68 + 4  # i_size 偏移量
+    inode_offset = INODE_TABLE_BLK * BLOCK_SIZE + inode_num * INODE_SIZE + 4  # i_size 偏移量
     with open(DISK_NAME, "r+b") as f:
         f.seek(inode_offset)
         f.write(struct.pack("<I", dir_size))
@@ -153,6 +156,8 @@ def update_bitmaps():
     # 构建数据块位图
     data_bitmap = bytearray(BLOCK_SIZE)
     for i in used_blocks:
+        data_bitmap[i // 8] |= (1 << (i % 8))
+    for i in range(0, DATA_START_BLK):
         data_bitmap[i // 8] |= (1 << (i % 8))
 
     with open(DISK_NAME, "r+b") as f:

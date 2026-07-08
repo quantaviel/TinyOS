@@ -24,4 +24,6 @@ struct tss_t {
     uint32_t ssp; // Shadow Stack Pointer.
 } __attribute__((packed));
 
+extern tss_t global_tss;
+
 void init_tss(void);

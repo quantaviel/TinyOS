@@ -72,6 +72,8 @@ struct d_inode {
     uint32_t i_mtime; /// TODO: time_t
     uint32_t i_atime; /// TODO: time_t
     uint32_t i_zone[12];
+
+    uint8_t  i_padding[60];
 };
 
 #pragma pack(pop)
@@ -87,8 +89,11 @@ struct super_block {
     uint32_t data_start_block;
 };
 
+extern super_block sb;
+
 inode* iget(uint32_t dev, uint32_t inode_number);
 void iput(inode* ip);
+int32_t inode_nr_alloc(uint32_t dev);
 void inode_init();
 
 } // namespace fs

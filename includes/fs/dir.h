@@ -17,11 +17,12 @@ struct directory {
 
 // find inode_number in dir_inode by dir name
 int find_entry(inode* dir_inode, const char* name);
+int add_entry(inode* dir_inode, const char* name, inode* sub_inode);
 
 // resolve path
 inode* namei(const char* path);
-
-int mkdir(const char* path, uint32_t flags);
+inode* dirnamei(const char* path, char* name);
+inode* create(inode* parent, const char* name, uint32_t mode);
 
 
 
