@@ -17,7 +17,7 @@ struct directory {
 
 // find inode_number in dir_inode by dir name
 int find_entry(inode* dir_inode, const char* name);
-int add_entry(inode* dir_inode, const char* name, inode* sub_inode);
+int add_entry(inode* dir_inode, const char* name, uint32_t sub_inode_nr);
 
 // resolve path
 inode* namei(const char* path);

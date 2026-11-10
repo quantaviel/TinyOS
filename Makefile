@@ -17,12 +17,15 @@ OS:=$(BUILD_DIR)/$(NAME).iso
 DISK:=$(BUILD_DIR)/disk.img
 
 LINK_SCRIPT:=linker/linker.ld
-TOOLS_DIR:=/usr/local/i386elf/bin
-CC:=$(TOOLS_DIR)/i386-elf-g++
+CROSS_PREFIX?=i686-elf-
+CC:=$(CROSS_PREFIX)g++
 CFLAGS:= -std=c++20 -g -O0 -ffreestanding -fno-threadsafe-statics -fno-exceptions -fno-rtti -nostdlib -nostartfiles
 DEFINES:=$(ARCH)
-AS:=$(TOOLS_DIR)/i386-elf-as
-LD:=$(TOOLS_DIR)/i386-elf-ld
+AS:=$(CROSS_PREFIX)as
+LD:=$(CROSS_PREFIX)ld
+OBJDUMP:=$(CROSS_PREFIX)objdump
+GRUB_FILE:=$(CROSS_PREFIX)grub-file
+GRUB_MKRESCUE:=$(CROSS_PREFIX)grub-mkrescue
 LDFLAGS:=-ffreestanding
 
 QEMU_MON_PORT := 45454
@@ -43,9 +46,9 @@ $(BINTARGET): $(OBJECTS) $(LINK_SCRIPT)
 	$(LD) -T $(LINK_SCRIPT) -o $@ $(OBJECTS)
 
 $(OS): $(BINTARGET)
-	@objdump -d $(BINTARGET) > build/kernel_dump.txt
+	@$(OBJDUMP) -d $(BINTARGET) > build/kernel_dump.txt
 # check if TARGET is x86 multiboot
-	@if grub-file --is-x86-multiboot $(BINTARGET); then \
+	@if $(GRUB_FILE) --is-x86-multiboot $(BINTARGET); then \
 		echo "multiboot confirmed"; \
 	else \
 		echo "Error: the file is not multiboot" >&2; \
@@ -57,7 +60,7 @@ $(OS): $(BINTARGET)
 	@printf "\tmultiboot /boot/%s.bin\n" "$(NAME)" >> $(BUILD_DIR)/iso/boot/grub/grub.cfg
 	@printf "}\n" >> $(BUILD_DIR)/iso/boot/grub/grub.cfg
 	@cp $(BINTARGET) $(BUILD_DIR)/iso/boot/$(NAME).bin
-	@grub-mkrescue -o $(OS) $(BUILD_DIR)/iso
+	@$(GRUB_MKRESCUE) -o $(OS) $(BUILD_DIR)/iso
 
 $(DISK): mkfs/mkfs.py
 	python3 mkfs/mkfs.py

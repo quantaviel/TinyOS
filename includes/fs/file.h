@@ -16,6 +16,8 @@ struct file;
 struct file_operations {
     int (*read) (file*, void*, size_t);
     int (*write)(file*, const void*, size_t);
+    int (*open) (file*);
+    int (*close)(file*);
 };
 
 struct file {

@@ -24,9 +24,9 @@ auto memcmp(const void *lhs, const void *rhs, size_t size) -> int {
     return 0;
 }
 
-auto memset(void *src, uint8_t v, size_t size) -> void* {
+auto memset(void *src, int v, size_t size) -> void* {
     uint8_t* d = (uint8_t*) src;
-    while (size--) *d++ = v;
+    while (size--) *d++ = (uint8_t)v;
     return src;
 }
 

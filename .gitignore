@@ -1,6 +1,15 @@
+.DS_Store
+
 build/
 .vscode/
 *.log
 user/
 test/
 disk/
+
+binutils-2.44/
+binutils-build/
+binutils-2.44.tar.gz
+gcc-12.1.0/
+gcc-build/
+gcc-12.1.0.tar.gz

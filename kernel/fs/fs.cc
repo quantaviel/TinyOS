@@ -91,33 +91,40 @@ int sys_read(int fd, void* buf, size_t count) {
         count = ip->i_size - pos;
     }
 
-    uint32_t bytes_read = 0;
-
-    while (bytes_read < count) {
-        uint32_t logical_block = (pos + bytes_read) / FS_BLOCK_SIZE;
-        uint32_t offset = (pos + bytes_read) % FS_BLOCK_SIZE;
-        uint32_t remain = FS_BLOCK_SIZE - offset;
-        uint32_t chunk_size = remain;
-
-        if (remain > count - bytes_read) {
-            chunk_size = count - bytes_read;
-        }
-
-        uint32_t lba = ip->i_zone[logical_block];
-        
-        buf::buffer_head* bh = buf::read(ip->dev, lba);
-        
-        memcpy(buf, bh->data + offset, chunk_size);
-        
-        buf += chunk_size;
-        bytes_read += chunk_size;
-        
-        buf::release(bh);
+    if (!fp->f_ops->read) {
+        /// TODO: error produce
+        return -1;
     }
 
-    fp->f_pos += bytes_read;
+    return fp->f_ops->read(fp, buf, count);
 
-    return bytes_read;
+    // uint32_t bytes_read = 0;
+
+    // while (bytes_read < count) {
+    //     uint32_t logical_block = (pos + bytes_read) / FS_BLOCK_SIZE;
+    //     uint32_t offset = (pos + bytes_read) % FS_BLOCK_SIZE;
+    //     uint32_t remain = FS_BLOCK_SIZE - offset;
+    //     uint32_t chunk_size = remain;
+
+    //     if (remain > count - bytes_read) {
+    //         chunk_size = count - bytes_read;
+    //     }
+
+    //     uint32_t lba = ip->i_zone[logical_block];
+        
+    //     buf::buffer_head* bh = buf::read(ip->dev, lba);
+        
+    //     memcpy(buf, bh->data + offset, chunk_size);
+        
+    //     buf += chunk_size;
+    //     bytes_read += chunk_size;
+        
+    //     buf::release(bh);
+    // }
+
+    // fp->f_pos += bytes_read;
+
+    // return bytes_read;
 }
 
 int sys_write(int fd, const void* buf, size_t count) {
@@ -133,53 +140,60 @@ int sys_write(int fd, const void* buf, size_t count) {
     uint32_t pos = fp->f_pos;
     inode* ip = fp->f_inode;
 
-    // ip lock
+    // ip lock (lock in file operation write, no need lock here)
 
     if (fp->f_mode & O_APPEND) {
         pos = ip->i_size;
     }
 
-    size_t bytes_written = 0;
-
-    while (bytes_written < count) {
-        uint32_t logical_block = pos / FS_BLOCK_SIZE;
-        uint32_t offset = pos % FS_BLOCK_SIZE;
-
-        uint32_t lba = ip->i_zone[logical_block];
-        if (ip->i_zone[logical_block] == 0) {
-            ip->i_zone[logical_block] = block_alloc(ip->dev);
-            lba = ip->i_zone[logical_block];
-            ip->i_blocks++;
-        }
-
-        uint32_t chunk_size = FS_BLOCK_SIZE - offset;
-        
-        if (chunk_size > count - bytes_written) {
-            chunk_size = count - bytes_written;
-        }
-
-        buf::buffer_head* bh = buf::read(ip->dev, lba);
-        
-        memcpy(bh->data + offset, buf, chunk_size);
-
-        bh->flags |= B_DIRTY;
-        buf::release(bh);
-
-        buf += chunk_size;
-        bytes_written += chunk_size;
-        pos += chunk_size;
+    if (!fp->f_ops->write) {
+        /// TODO: error produce.
+        return -1;
     }
 
-    fp->f_pos = pos;
-    if (fp->f_pos > ip->i_size) {
-        ip->i_size = fp->f_pos;
-    }
+    return fp->f_ops->write(fp, buf, count);
 
-    ip->is_dirty = 1;
+    // size_t bytes_written = 0;
 
-    // ip unlock
+    // while (bytes_written < count) {
+    //     uint32_t logical_block = pos / FS_BLOCK_SIZE;
+    //     uint32_t offset = pos % FS_BLOCK_SIZE;
 
-    return bytes_written;
+    //     uint32_t lba = ip->i_zone[logical_block];
+    //     if (ip->i_zone[logical_block] == 0) {
+    //         ip->i_zone[logical_block] = block_alloc(ip->dev);
+    //         lba = ip->i_zone[logical_block];
+    //         ip->i_blocks++;
+    //     }
+
+    //     uint32_t chunk_size = FS_BLOCK_SIZE - offset;
+        
+    //     if (chunk_size > count - bytes_written) {
+    //         chunk_size = count - bytes_written;
+    //     }
+
+    //     buf::buffer_head* bh = buf::read(ip->dev, lba);
+        
+    //     memcpy(bh->data + offset, buf, chunk_size);
+
+    //     bh->flags |= B_DIRTY;
+    //     buf::release(bh);
+
+    //     buf += chunk_size;
+    //     bytes_written += chunk_size;
+    //     pos += chunk_size;
+    // }
+
+    // fp->f_pos = pos;
+    // if (fp->f_pos > ip->i_size) {
+    //     ip->i_size = fp->f_pos;
+    // }
+
+    // ip->is_dirty = 1;
+
+    // // ip unlock
+
+    // return bytes_written;
 }
 
 int sys_mkdir(const char* path, int mode) {
