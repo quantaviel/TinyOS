@@ -5,8 +5,8 @@ namespace sleep {
 
 void sleep_event(waiting_queue* wq) {
 
-    if (proc::current_pcb->state == proc::PROC_BLOCKED) return;
-    proc::current_pcb->state = proc::PROC_BLOCKED;
+    if (proc::current_pcb->state == proc::proc_state::blocked) return;
+    proc::current_pcb->state = proc::proc_state::blocked;
 
     list_push_back(wq, &proc::current_pcb->waiting_node);
 
@@ -19,7 +19,7 @@ void wake_up_one(waiting_queue* wq) {
     list_remove(node);
 
     proc::proc* front = container_of(node, proc::proc, waiting_node);
-    front->state = proc::PROC_READY;
+    front->state = proc::proc_state::ready;
     proc::append_ready_queue(front);
 }
 

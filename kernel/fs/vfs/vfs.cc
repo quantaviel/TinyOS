@@ -1,18 +1,59 @@
 #include <fs/vfs.h>
+#include <fs/buf.h>
+#include <fs/tinyfs/tinyfs.h>
+
+#include <klib/string.h>
 
 namespace vfs {
 
 void file_lock();
 void file_unlock();
 
-inode* root_inode = nullptr;
+inode* root_inode {nullptr};
 
-void init() {
+bool init() {
+    if (root_inode != nullptr) {
+        return default_tty != nullptr;
+    }
 
-}
+    block_cache::init();
+    super_block* root_fs = tinyfs::load(1);
+    if (root_fs == nullptr) {
+        return false;
+    }
 
-int mount(mount_entry* parent, super_block* sb, dentry* root, dentry* mount_point) {
+    static dentry root {.parent = nullptr, .in = root_fs->root, .name = "/"};
+    if (mount(nullptr, root_fs, &root, nullptr) < 0) {
+        return false;
+    }
 
+    inode* dev_dir = namei("/dev");
+    if (dev_dir == nullptr) {
+        dev_dir = root_inode->i_ops->mkdir(root_inode, "dev", 0755);
+    }
+    if (dev_dir == nullptr) {
+        return false;
+    }
+    if (!S_ISDIR(dev_dir->i_mode)) {
+        dev_dir->sb->iput(dev_dir);
+        return false;
+    }
+
+    dev_dir->sb->iput(dev_dir);
+
+    inode* tty_inode = namei("/dev/tty");
+    if (tty_inode != nullptr) {
+        bool is_character_device = S_ISCHR(tty_inode->i_mode);
+        tty_inode->sb->iput(tty_inode);
+        if (!is_character_device) {
+            return false;
+        }
+    } else if (mknod("/dev/tty", S_IFCHR | 0666, tinyfs::TTY_DEVICE) < 0) {
+        return false;
+    }
+
+    default_tty = open("/dev/tty", O_RDWR);
+    return default_tty != nullptr;
 }
 
 inode* namei(const char* path) {
@@ -48,8 +89,13 @@ inode* namei(const char* path) {
         auto sb = curr_ip->sb;
         auto i_ops = curr_ip->i_ops;
         
-        if (sb == nullptr || i_ops == nullptr || i_ops->lookup == nullptr) {
-            /// FUTURE: Change to assert
+        if (sb == nullptr) {
+            /// FUTURE: Change to assert and abort
+            return nullptr;
+        }
+        
+        if (i_ops == nullptr || i_ops->lookup == nullptr) {
+            curr_ip->sb->iput(curr_ip);
             return nullptr;
         }
         
@@ -81,6 +127,40 @@ inode* namei(const char* path) {
     }
 
     return curr_ip;
+}
+
+inode* parent_resolve(const char* path, char* filename) {
+    if (path == nullptr || *path == '\0') {
+        return nullptr;
+    }
+
+    int len = strlen(path);
+    len = len - 1;
+    if (path[len] == '/') {
+        // not a valid path of a file
+        return nullptr;
+    }
+
+    int cache_len = 0, flen = 0;
+    char str_cache[100];
+    while (path[len] != '/' && len) {
+        str_cache[cache_len++] = path[len];
+        --len;
+    }
+    
+    cache_len--;
+    while (cache_len >= 0) {
+        filename[flen++] = str_cache[cache_len--];
+    }
+    filename[flen] = '\0';
+
+    for (int i = 0; i <= len; ++i) {
+        str_cache[i] = path[i];
+    }
+    if (len != 0) str_cache[len] = '\0';
+    else str_cache[len + 1] = '\0';
+
+    return namei(str_cache);
 }
 
 file* open(const char* path, int flags) {
@@ -161,6 +241,37 @@ inode* mkdir(dentry* dir, const char* name, int mode) {
     }
 
     return dir->in->i_ops->mkdir(dir->in, name, mode);
+}
+
+int mknod(const char* path, uint32_t mode, uint32_t dev) {
+    if (auto in = namei(path); in != nullptr) {
+        // file already exists
+        in->sb->iput(in);
+        return -1;
+    }
+
+    char filename[100];
+    inode* parent = parent_resolve(path, filename);
+
+    if (parent == nullptr) {
+        return -1;
+    }
+    
+    if (!S_ISDIR(parent->i_mode)) {
+        // parent is not directory
+        parent->sb->iput(parent);
+        return -1;
+    }
+
+    if (parent->i_ops == nullptr || parent->i_ops->mknod == nullptr) {
+        parent->sb->iput(parent);
+        return -1;
+    }
+
+    int err = parent->i_ops->mknod(parent, filename, mode, dev);
+    parent->sb->iput(parent);
+
+    return err;
 }
 
 } // namespace vfs

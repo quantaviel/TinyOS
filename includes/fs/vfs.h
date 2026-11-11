@@ -3,6 +3,10 @@
 #include <stdint-gcc.h>
 #include <stddef.h>
 
+#define STDIN_FNO 0
+#define STDOUT_FNO 1
+#define STDERR_FNO 2
+
 namespace vfs {
 
 
@@ -80,6 +84,9 @@ struct inode_operations {
     
     // create directory under parent inode: inode pointer, name, mode
     inode* (*mkdir)  (inode*, const char*, uint32_t);
+
+    // create special inode with path, mode and dev
+    int    (*mknod)  (inode*, const char*, uint32_t, uint32_t);
 };
 
 struct inode {
@@ -99,6 +106,7 @@ struct inode {
 // directory entry
 
 struct dentry {
+    dentry* parent;
     inode* in;
     char name[60];
 };
@@ -139,16 +147,23 @@ file* dup_file(file* f);
 
 // mount
 
-struct mount_entry {
-    super_block* sb;
-    dentry* root;
-    mount_entry* parent;
-    dentry* mount_point;
+enum class mount_node_state {
+    avaliable,
+    used
 };
 
-int mount(mount_entry* parent, super_block* sb, dentry* root, dentry* mount_point);
+struct mount_node {
+    super_block* sb;
+    dentry* root;
+    mount_node* parent;
+    dentry* mount_point;
 
-void init();
+    mount_node_state state;
+};
+
+int mount(mount_node* parent, super_block* sb, dentry* root, dentry* mount_point);
+
+bool init();
 inode* namei(const char* path);
 
 file* open(const char* path, int flags);
@@ -156,8 +171,13 @@ int close(file* f);
 int read(file* f, void* buf, size_t count);
 int write(file* f, const void* buf, size_t count);
 inode* mkdir(dentry* dir, const char* name, int mode);
-
+int mknod(const char* path, uint32_t mode, uint32_t dev);
 extern inode* root_inode;
+extern file* default_tty;
+int sys_open(const char* path, int flags);
+int sys_close(int fd);
+int sys_read(int fd, void* buf, size_t count);
+int sys_write(int fd, const void* buf, size_t count);
 
 
 } // namespace vfs

@@ -16,7 +16,7 @@
 #include <hal/vga.h>
 #include <core/syscall.h>
 #include <driver/ata.h>
-#include <fs/fs.h>
+#include <fs/vfs.h>
 
 /**
  * functions called in assembly should use
@@ -135,6 +135,7 @@ void kernel_main() {
     }
     fmt::println("Allocated large chunk at {x}, size = {}", large_ptr, large_size);
     mm::kvm::kfree(large_ptr);
+
     // auto event = timer::register_event(
     //     1, timer::TIMER_PERIODIC, timer::TIMER_TICK,
     //     [](void* arg) { fmt::println("Tick!"); }, nullptr
@@ -147,7 +148,12 @@ void kernel_main() {
     // );
     init_tss();
     syscall_init();
-    fs::init();
+
+    if (!vfs::init()) {
+        fmt::println("VFS: failed to mount tinyfs root or open TTY");
+        for (;;) asm volatile("cli; hlt");
+    }
+
     proc::init((uint32_t)main);
     
     // unreachable

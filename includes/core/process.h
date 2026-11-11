@@ -3,18 +3,18 @@
 #include <stdint-gcc.h>
 #include <ds/list.h>
 #include <arch/x86/int.h>
-#include <fs/file.h>
+#include <fs/vfs.h>
 
 #define MAX_FD 16
 
 namespace proc {
 
-enum proc_state {
-    PROC_READY,
-    PROC_BLOCKED,
-    PROC_RUNNING,
-    PROC_ZOMBIE,
-    PROC_SYSTEM
+enum class proc_state {
+    ready,
+    blocked,
+    running,
+    zombie,
+    system,
 };
 
 using pid_t = int32_t;
@@ -40,7 +40,7 @@ struct proc {
     list_node_t waiting_node;
 
     char name[20]; // process name
-    fs::file* fd_array[MAX_FD];
+    vfs::file* fd_array[MAX_FD];
 };
 
 extern proc* current_pcb;

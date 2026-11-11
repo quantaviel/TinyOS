@@ -16,8 +16,7 @@
 #include <klib/string.h>
 #include <klib/fmt.h>
 
-#include <fs/fs.h>
-#include <fs/file.h>
+#include <fs/vfs.h>
 
 namespace proc {
 
@@ -177,13 +176,13 @@ proc* create_process(uint32_t entry, const char* name) {
     fmt::println("Copy page directory and page table. New page directory: {x}", new_pcb->cr3);
 
     new_pcb->pid = get_available_pid();
-    new_pcb->state = PROC_READY;
+    new_pcb->state = proc_state::ready;
     new_pcb->quantum = 100;
     strcpy(new_pcb->name, name);
     for (int i = 0; i < MAX_FD; ++i) new_pcb->fd_array[i] = nullptr;
-    new_pcb->fd_array[STDIN_FNO] = fs::dup_file(fs::default_tty);
-    new_pcb->fd_array[STDOUT_FNO] = fs::dup_file(fs::default_tty);
-    new_pcb->fd_array[STDERR_FNO] = fs::dup_file(fs::default_tty);
+    new_pcb->fd_array[STDIN_FNO] = vfs::dup_file(vfs::default_tty);
+    new_pcb->fd_array[STDOUT_FNO] = vfs::dup_file(vfs::default_tty);
+    new_pcb->fd_array[STDERR_FNO] = vfs::dup_file(vfs::default_tty);
     new_pcb->sub_proc = new_pcb->next_proc = new_pcb->parent_proc = nullptr;
 
     fmt::println("Create user stack.");
@@ -233,7 +232,7 @@ void init(uint32_t entry) {
     // set kernel main pcb
     current_pcb = &kernel_main_pcb;
     kernel_main_pcb.pid = 0; pid_mark(0);
-    kernel_main_pcb.state = PROC_SYSTEM;
+    kernel_main_pcb.state = proc_state::system;
     kernel_main_pcb.cr3 = cpu::get_page_dir();
 
     proc* init_proc = create_process(entry, "init");
@@ -253,8 +252,8 @@ void schedule() {
     proc* old_proc = current_pcb;
 
     switch (current_pcb->state) {
-        case PROC_RUNNING:
-            current_pcb->state = PROC_READY;
+        case proc_state::running:
+            current_pcb->state = proc_state::ready;
             append_ready_queue(current_pcb);
             break;
         default:
@@ -263,7 +262,7 @@ void schedule() {
         
     current_pcb = front_ready_queue();
     current_pcb->remaining = current_pcb->quantum;
-    current_pcb->state = PROC_RUNNING;
+    current_pcb->state = proc_state::running;
 
     popfront_ready_queue();
 
@@ -320,11 +319,11 @@ pid_t sys_fork(int_frame_t* frame) {
     sub_pcb->sub_proc = sub_pcb->next_proc = nullptr;
     insert(current_pcb, sub_pcb);
     sub_pcb->quantum = 100;
-    sub_pcb->state = PROC_READY;
+    sub_pcb->state = proc_state::ready;
     strcpy(sub_pcb->name, "sub process");
     for (int i = 0; i < MAX_FD; ++i) {
         if (current_pcb->fd_array[i] != nullptr) {
-            sub_pcb->fd_array[i] = fs::dup_file(current_pcb->fd_array[i]);
+            sub_pcb->fd_array[i] = vfs::dup_file(current_pcb->fd_array[i]);
         }
     }
 
@@ -359,8 +358,14 @@ proc* get_current_proc() {
 }
 
 void sys_exit(int status) {
+    for (int i = 0; i < MAX_FD; ++i) {
+        if (current_pcb->fd_array[i]) {
+            vfs::close(current_pcb->fd_array[i]);
+            current_pcb->fd_array[i] = nullptr;
+        }
+    }
     current_pcb->exit_status = status;
-    current_pcb->state = PROC_ZOMBIE;
+    current_pcb->state = proc_state::zombie;
 }
 
 } // namespace proc

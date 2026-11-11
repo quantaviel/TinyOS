@@ -8,7 +8,7 @@
 
 #include <klib/fmt.h>
 
-#include <fs/fs.h>
+#include <fs/vfs.h>
 
 #include <stdint-gcc.h>
 #include <stddef.h>
@@ -84,19 +84,19 @@ void syscall_handler(int_frame_t* frame) {
     int32_t ret_value = 0;
     switch (call_numer) {
         case SYS_read:
-            ret_value = fs::sys_read(arg1, (void *)arg2, arg3);
+            ret_value = vfs::sys_read(arg1, (void *)arg2, arg3);
             break;
         case SYS_write:
-            ret_value = fs::sys_write(arg1, (const void*)arg2, arg3);
+            ret_value = vfs::sys_write(arg1, (const void*)arg2, arg3);
             break;
         case SYS_fork:
             ret_value = proc::sys_fork(frame);
             break;
         case SYS_open:
-            ret_value = fs::sys_open((const char*)arg1, arg2);
+            ret_value = vfs::sys_open((const char*)arg1, arg2);
             break;
         case SYS_close:
-            ret_value = fs::sys_close(arg1);
+            ret_value = vfs::sys_close(arg1);
             break;
         case SYS_exit:
             proc::sys_exit(arg1);

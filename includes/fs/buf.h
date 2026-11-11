@@ -10,9 +10,9 @@
 #define B_VALID 0x1
 #define B_DIRTY 0x2
 
-namespace fs {
+namespace block_cache {
 
-namespace buf {
+constexpr uint32_t BLOCK_SIZE = 512;
 
 struct buffer_head {
     uint8_t* data;
@@ -38,6 +38,4 @@ void write(uint32_t dev, uint32_t lba, void* data);
 void release(buffer_head* buf);
 void init();
 
-} // namespace buf
-
-} // namespace fs
+} // namespace block_cache
