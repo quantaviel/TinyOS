@@ -162,20 +162,12 @@ void kernel_main() {
     }
 }
 
-void kernel_idel_function() {
-    while (1) {
-        cpu::halt();
-    }
-}
-
-
 void main() {
     write(STDOUT_FNO, "stdout test\n", 12);
-    int pid = fork();
-    if (pid == 0) {
-        write(STDOUT_FNO, "Sub Process!\n", 13);
-    } else {
-        write(STDOUT_FNO, "Parent Process!\n", 16);
-    }
+    char ch[10];
+    read(STDIN_FNO, ch, 9);
+    // write(STDOUT_FNO, ch, 1);
+    write(STDOUT_FNO, ch, 9);
+    write(STDOUT_FNO, "stdout test\n", 12);
     while (1);
 }

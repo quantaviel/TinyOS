@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mm/memory.h>
+
 #include <stdint-gcc.h>
 
 namespace cpu {
@@ -26,7 +28,7 @@ static inline void outb(uint16_t port, uint8_t val) {
     );
 }
 
-static inline auto inb(uint16_t port) -> uint8_t {
+static inline uint8_t inb(uint16_t port) {
     uint8_t ret;
     asm volatile (
         "inb %w1, %b0" 
@@ -48,7 +50,7 @@ static inline void outsw(uint16_t port, const void* addr, uint32_t cnt) {
 }
 
 void pic_disable();
-void refresh_tlb(uintptr_t addr);
+void refresh_tlb(mm::vaddr_t addr);
 void refresh_all_tlb();
 
 void disable_interrupts();
@@ -56,10 +58,10 @@ void enable_interrupts();
 void read_msr(uint32_t msr, uint32_t* low, uint32_t* high);
 void write_msr(uint32_t msr, uint32_t low, uint32_t high);
 
-void switch_page_dir(uint32_t page_dir_addr);
-auto get_esp() -> uint32_t;
-auto get_page_dir() -> uint32_t;
-void set_page_dir(uint32_t addr);
+void switch_page_dir(mm::paddr_t page_dir_addr);
+uint32_t get_esp();
+mm::paddr_t get_page_dir();
+void set_page_dir(mm::paddr_t addr);
 
 void halt();
 

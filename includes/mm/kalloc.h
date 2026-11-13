@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mm/memory.h>
+
 #include <mm/vmm.h>
 #include <mm/heap.h>
 
@@ -13,10 +15,10 @@ public:
         static kheap kernel_heap;
         return kernel_heap;
     }
-    static void init(uintptr_t head, uintptr_t limit) {
+    static void init(mm::vaddr_t head, mm::vaddr_t limit) {
         get_kheap().init(head, limit);
     }
-    static uintptr_t kalloc(size_t size) {
+    static mm::vaddr_t kalloc(size_t size) {
         return get_kheap().kalloc(size);
     }
     static void kfree(void *addr) {

@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint-gcc.h>
 #include <hal/vga.h>
+#include <klib/type_traits.h>
 
 namespace fmt {
 
@@ -82,7 +83,10 @@ void print(const char* fmt, T value, Rest... rest) {
         }
 
         if (fmt[0] == '{' && fmt[1] == 's' && fmt[2] == '}') {
-            print_value((const char*)value);
+            if constexpr (klib::is_same_v<T, char*> ||
+                          klib::is_same_v<T, const char*>) {
+                print_value(static_cast<const char*>(value));
+            }
             print(fmt + 3, rest...);
             return;
         }

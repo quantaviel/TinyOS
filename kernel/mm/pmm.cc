@@ -77,7 +77,7 @@ bool pmm::is_marked(paddr_t paddr) {
     return bitmap[paddr >> 15] & (1 << ((paddr >> 12) & 7));
 }
 
-auto pmm::get_refcount(paddr_t paddr) -> int {
+int pmm::get_refcount(paddr_t paddr) {
     return refcount[paddr >> PAGE_SHIFT];
 }
 

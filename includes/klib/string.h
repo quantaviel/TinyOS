@@ -5,16 +5,16 @@
 
 extern "C" {
 
-auto memcpy(void *dst, const void *src, size_t size) -> void*;
+void* memcpy(void *dst, const void *src, size_t size);
 
-auto memcmp(const void *lhs, const void *rhs, size_t size) -> int;
+int memcmp(const void *lhs, const void *rhs, size_t size);
 
-auto memset(void *src, int v, size_t size) -> void*;
+void* memset(void *src, int v, size_t size);
 
-auto strcpy(char *dst, const char* src) -> char*;
+char* strcpy(char *dst, const char* src);
 
-auto strlen(const char* src) -> size_t;
+size_t strlen(const char* src);
 
-auto strcmp(const char *lhs, const char *rhs) -> int;
+int strcmp(const char *lhs, const char *rhs);
 
 }

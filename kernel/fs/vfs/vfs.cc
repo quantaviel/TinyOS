@@ -206,7 +206,7 @@ int close(file* f) {
 }
 
 int read(file* f, void* buf, size_t count) {
-    if (f == nullptr) {
+    if (f == nullptr || count > static_cast<size_t>(__INT_MAX__)) {
         return -1;
     }
 
@@ -218,7 +218,7 @@ int read(file* f, void* buf, size_t count) {
 }
 
 int write(file* f, const void* buf, size_t count) {
-    if (f == nullptr) {
+    if (f == nullptr || count > static_cast<size_t>(__INT_MAX__)) {
         return -1;
     }
 

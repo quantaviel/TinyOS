@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint-gcc.h>
+#include <mm/memory.h>
 #include <ds/list.h>
 #include <arch/x86/int.h>
 #include <fs/vfs.h>
@@ -23,7 +24,7 @@ using pid_t = int32_t;
 struct proc {
     uint32_t kernel_stack_ptr; // kernel stack pointer
 
-    uintptr_t cr3; // process page directory address (phy)
+    mm::paddr_t cr3; // process page directory address (phy)
 
     pid_t pid; // process id
     proc_state state; // process state
@@ -46,7 +47,7 @@ struct proc {
 extern proc* current_pcb;
 
 void schedule();
-auto sys_fork(int_frame_t* frame) -> pid_t;
+pid_t sys_fork(int_frame_t* frame);
 void sys_exit(int status);
 
 void init(uint32_t entry);

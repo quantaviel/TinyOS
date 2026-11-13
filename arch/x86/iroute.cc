@@ -101,7 +101,7 @@ void inter_page_fault(int_frame_t *frame) {
     }
     if (frame->error_code & 2) { // page is read only: COW
         vaddr &= 0xFFFFF000;
-        uintptr_t paddr = mm::pt::translate(vaddr);
+        mm::paddr_t paddr = mm::pt::translate(vaddr);
         uint32_t refcount = mm::pmm::get_refcount(paddr);
         
         // page about declaration
@@ -121,7 +121,7 @@ void inter_page_fault(int_frame_t *frame) {
 
         mm::pmm::dec_refcount(paddr);
 
-        uintptr_t new_paddr = mm::pmm::alloc_page();
+        mm::paddr_t new_paddr = mm::pmm::alloc_page();
         char *page_content = (char *)mm::kvm::kalloc(PAGE_SIZE);
         for (int i = 0; i < PAGE_SIZE; ++i) {
             page_content[i] = ((char *)vaddr)[i];

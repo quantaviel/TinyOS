@@ -83,6 +83,12 @@ void scroll_up() {
     WRITER.current_pos = (VGA_HEIGHT - 1) * VGA_WIDTH;
 }
 
+char recieve(const char& ch) {
+    if (ch != '\0')
+        putchar(ch);
+    return ch;
+}
+
 } // namespace vga
 
 

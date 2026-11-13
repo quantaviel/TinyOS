@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mm/memory.h>
+
 #include <stdint-gcc.h>
 
 #define IA32_APIC_BASE_MSR                  0x1B
@@ -86,10 +88,10 @@ static inline void write_reg(uint32_t offset, uint32_t value) {
 }
 
 // Get Local APIC base address
-uintptr_t get_base_addr();
+mm::paddr_t get_base_addr();
 
 // Set Local APIC base address
-void set_base_addr(uintptr_t addr);
+void set_base_addr(mm::paddr_t addr);
 
 // Initialize Local APIC
 void init();

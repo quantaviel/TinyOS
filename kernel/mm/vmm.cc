@@ -120,7 +120,7 @@ vaddr_t get_temp_page() {
     return vaddr;
 }
 
-void free_temp_page(uintptr_t vaddr) {
+void free_temp_page(vaddr_t vaddr) {
     vaddr &= 0xFFFFF000;
     unmap(vaddr);
     vmm::free_bit_page(vaddr);

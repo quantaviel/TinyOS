@@ -13,7 +13,7 @@ void init() {
     // APIC enable
     enable();
 
-    uintptr_t apic_base = get_base_addr();
+    mm::paddr_t apic_base = get_base_addr();
     uint32_t apic_id = get_id();
     uint32_t apic_version = get_version();
     fmt::println("Local APIC initialized at {x}, ID: {}, Version: {}", apic_base, apic_id, apic_version);
@@ -55,13 +55,13 @@ void enable() {
     cpu::write_msr(IA32_APIC_BASE_MSR, low, high);
 }
 
-uintptr_t get_base_addr() {
+mm::paddr_t get_base_addr() {
     uint32_t low, high;
     cpu::read_msr(IA32_APIC_BASE_MSR, &low, &high);
-    return (uintptr_t)(low & 0xFFFFF000);
+    return (mm::paddr_t)(low & 0xFFFFF000);
 }
 
-void set_base_addr(uintptr_t addr) {
+void set_base_addr(mm::paddr_t addr) {
     uint32_t low, high;
     cpu::read_msr(IA32_APIC_BASE_MSR, &low, &high);
     low = (low & 0x00000FFF) | (addr & 0xFFFFF000);

@@ -62,7 +62,7 @@ Size should be aligned to 4 bytes.
 
 namespace mm {
 
-void kheap::init(uintptr_t head, uintptr_t limit) {
+void kheap::init(mm::vaddr_t head, mm::vaddr_t limit) {
     vmm::alloc_page(head);
     this->head = head;
     this->end = head + PAGE_SIZE - WSIZE;
@@ -80,10 +80,10 @@ void kheap::init(uintptr_t head, uintptr_t limit) {
     *first_chunk_footer = HEAP_CHUNK(first_chunk_size, 1, 0);
 }
 
-uintptr_t kheap::kalloc(size_t size) {
+mm::vaddr_t kheap::kalloc(size_t size) {
     size = (size + 3) & ~0x3; // align to 4 bytes
     size_t total_size = size + 2 * WSIZE; // include header and footer
-    uintptr_t curr = this->head + WSIZE;
+    mm::vaddr_t curr = this->head + WSIZE;
     while (curr < this->end) {
         uint32_t chunk_header = HEAP_CHUNK_HEAD(curr);
         size_t chunk_size = HEAP_CHUNK_SIZE(chunk_header);
@@ -113,7 +113,7 @@ uintptr_t kheap::kalloc(size_t size) {
         *alloc_chunk_footer = HEAP_CHUNK(total_size, HEAP_CHUNK_PREV_USED(chunk_header), 1);
     } else {
         // update next chunk's prev_used flag
-        uintptr_t next_chunk_addr = curr + total_size;
+        mm::vaddr_t next_chunk_addr = curr + total_size;
         if (next_chunk_addr < this->end) {
             uint32_t *next_chunk_header = (uint32_t *)next_chunk_addr;
             *next_chunk_header |= 0x2; // set prev_used flag
@@ -125,7 +125,7 @@ uintptr_t kheap::kalloc(size_t size) {
 }
 
 void kheap::kfree(void *addr) {
-    uintptr_t chunk_addr = (uintptr_t)addr - WSIZE;
+    mm::vaddr_t chunk_addr = (uintptr_t)addr - WSIZE;
     uint32_t *chunk_header = (uint32_t *)chunk_addr;
     size_t chunk_size = HEAP_CHUNK_SIZE(*chunk_header);
 
@@ -135,7 +135,7 @@ void kheap::kfree(void *addr) {
     *chunk_footer = HEAP_CHUNK(chunk_size, HEAP_CHUNK_PREV_USED(*chunk_header), 0);
 
     // update next chunk's prev_used flag
-    uintptr_t next_chunk_addr = chunk_addr + chunk_size;
+    mm::vaddr_t next_chunk_addr = chunk_addr + chunk_size;
     if (next_chunk_addr < this->end) {
         uint32_t *next_chunk_header = (uint32_t *)next_chunk_addr;
         *next_chunk_header &= ~0x2; // clear prev_used flag
@@ -151,7 +151,7 @@ bool kheap::extend(size_t size) {
     size_t extend_size = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
     if (this->end + extend_size + WSIZE > this->limit) return false;
 
-    uintptr_t old_end = this->end;
+    mm::vaddr_t old_end = this->end;
     uint32_t old_epilogue = *(uint32_t *)(old_end);
     for (size_t offset = 0; offset < extend_size; offset += PAGE_SIZE) {
         vmm::alloc_page(this->end + WSIZE + offset);
@@ -172,12 +172,12 @@ bool kheap::extend(size_t size) {
     return true;
 }
 
-void kheap::merge(uintptr_t chunk_addr) {
+void kheap::merge(mm::vaddr_t chunk_addr) {
     uint32_t chunk_header = HEAP_CHUNK_HEAD(chunk_addr);
     size_t chunk_size = HEAP_CHUNK_SIZE(chunk_header);
 
     // merge with next chunk if free
-    uintptr_t next_chunk_addr = chunk_addr + chunk_size;
+    mm::vaddr_t next_chunk_addr = chunk_addr + chunk_size;
     if (next_chunk_addr < this->end) {
         uint32_t next_chunk_header = HEAP_CHUNK_HEAD(next_chunk_addr);
         bool next_chunk_used = HEAP_CHUNK_IS_USED(next_chunk_header);
@@ -195,10 +195,10 @@ void kheap::merge(uintptr_t chunk_addr) {
 
     // merge with previous chunk if free
     if (!HEAP_CHUNK_PREV_USED(chunk_header)) {
-        uintptr_t prev_chunk_footer_addr = chunk_addr - WSIZE;
+        mm::vaddr_t prev_chunk_footer_addr = chunk_addr - WSIZE;
         uint32_t prev_chunk_footer = *(uint32_t *)prev_chunk_footer_addr;
         size_t prev_chunk_size = HEAP_CHUNK_SIZE(prev_chunk_footer);
-        uintptr_t prev_chunk_addr = chunk_addr - prev_chunk_size;
+        mm::vaddr_t prev_chunk_addr = chunk_addr - prev_chunk_size;
         // update previous chunk
         size_t new_size = prev_chunk_size + chunk_size;
         uint32_t *new_chunk_header = (uint32_t *)prev_chunk_addr;

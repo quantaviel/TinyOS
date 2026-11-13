@@ -20,7 +20,7 @@ public:
     static void mark_pages(paddr_t paddr, size_t len);
     static void unmark_pages(paddr_t paddr, size_t len);
     
-    static auto get_refcount(paddr_t paddr) -> int;
+    static int get_refcount(paddr_t paddr);
     static void inc_refcount(paddr_t paddr);
     static void dec_refcount(paddr_t paddr);
 private:

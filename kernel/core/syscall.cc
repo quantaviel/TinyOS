@@ -69,8 +69,8 @@ type name(type1 arg1, type2 arg2, type3 arg3) { \
     return (type) -1; \
 }
 
-_syscall3(int32_t, read, int, fd, void*, buf, size_t, size);
-_syscall3(int32_t, write, int, fd, const void*, buf, size_t, size);
+_syscall3(int, read, int, fd, void*, buf, size_t, size);
+_syscall3(int, write, int, fd, const void*, buf, size_t, size);
 _syscall0(proc::pid_t, fork);
 _syscall2(int32_t, open, const char*, path, int, flags);
 _syscall1(int32_t, close, int, fd);

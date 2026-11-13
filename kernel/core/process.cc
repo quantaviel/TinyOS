@@ -20,6 +20,12 @@
 
 namespace proc {
 
+void kernel_idel_function() {
+    while (1) {
+        cpu::halt();
+    }
+}
+
 #define PROCESS_KERNEL_STACK(p) ((uint32_t)(p) + PAGE_SIZE)
 
 using mm::kvm;
@@ -51,7 +57,7 @@ proc idel_pcb;
 proc* current_pcb{nullptr};
 
 constexpr uint32_t user_stack_size = 0x1000;
-constexpr uintptr_t user_stack_start = 0xBFFFFFFF;
+constexpr mm::vaddr_t user_stack_start = 0xBFFFFFFF;
 constexpr uint32_t PID_BITMAP_SIZE = 4096;
 static uint8_t pid_bitmap[4096];
 
@@ -79,7 +85,7 @@ pid_t get_available_pid() {
 void copy_page_table(uint32_t* dst_page_table, uint32_t* src_page_table) {
     for (int i = 0; i < 1024; ++i) {
         if (src_page_table[i] & PTE_PRESENT) {
-            uintptr_t paddr = src_page_table[i] & 0xFFFFF000;
+            mm::paddr_t paddr = src_page_table[i] & 0xFFFFF000;
             mm::pmm::inc_refcount(paddr);
             src_page_table[i] &= ~PTE_READ_WRITE;
             dst_page_table[i] = src_page_table[i];
@@ -87,10 +93,10 @@ void copy_page_table(uint32_t* dst_page_table, uint32_t* src_page_table) {
     }
 }
 
-auto copy_page_dir(uint32_t& cr3_vir) -> uintptr_t {
+mm::paddr_t copy_page_dir(mm::vaddr_t& cr3_vir) {
     uint32_t* page_dir = (uint32_t *)PD_VADDR;
-    uintptr_t new_page_dir_phy = mm::pmm::alloc_page();
-    uintptr_t new_page_dir_vir = mm::vmm::alloc_bit_page();
+    mm::paddr_t new_page_dir_phy = mm::pmm::alloc_page();
+    mm::vaddr_t new_page_dir_vir = mm::vmm::alloc_bit_page();
 
     if (!new_page_dir_phy) {
         fmt::println("Error: Unable to alloc memory for page directory!");
@@ -101,7 +107,7 @@ auto copy_page_dir(uint32_t& cr3_vir) -> uintptr_t {
     mm::pt::map(new_page_dir_vir, new_page_dir_phy, PDE_ATTR, PTE_ATTR);
 
     uint32_t* new_page_dir = (uint32_t*)new_page_dir_vir;
-    memset(new_page_dir, 0, sizeof(int) * 1024);
+    memset(new_page_dir, 0, sizeof(*new_page_dir) * 1024);
 
     // kernel page: direct copy
     for (int i = 0x300; i < 0x3FF; ++i) {
@@ -111,10 +117,10 @@ auto copy_page_dir(uint32_t& cr3_vir) -> uintptr_t {
     for (int i = 0; i < 0x300; ++i) {
         if (page_dir[i] & 1) { // page director exist
             uint32_t* page_table = (uint32_t*)(PT_BASE_VADDR + (i << PAGE_SHIFT));
-            uintptr_t new_page_table = mm::pmm::alloc_page();
+            mm::paddr_t new_page_table = mm::pmm::alloc_page();
             new_page_dir[i] = new_page_table | (page_dir[i] & 0xFFF);
 
-            uintptr_t new_page_table_vir = mm::vmm::alloc_bit_page();
+            mm::vaddr_t new_page_table_vir = mm::vmm::alloc_bit_page();
             mm::pt::map(new_page_table_vir, new_page_table, PDE_ATTR, PTE_ATTR);
             
             copy_page_table((uint32_t*)new_page_table_vir, page_table);
@@ -155,10 +161,10 @@ __attribute__((naked)) void process_start_wrapper() {
 
 // create process for first process
 proc* create_process(uint32_t entry, const char* name) {
-    uintptr_t new_pcb_phy = mm::pmm::alloc_page();
-    uintptr_t new_pcb_vir = mm::vmm::alloc_bit_page();
-    uintptr_t new_ker_stack_phy = PROCESS_KERNEL_STACK(new_pcb_phy);
-    uintptr_t new_ker_stack_vir = PROCESS_KERNEL_STACK(new_pcb_vir);
+    mm::paddr_t new_pcb_phy = mm::pmm::alloc_page();
+    mm::vaddr_t new_pcb_vir = mm::vmm::alloc_bit_page();
+    mm::paddr_t new_ker_stack_phy = PROCESS_KERNEL_STACK(new_pcb_phy);
+    mm::vaddr_t new_ker_stack_vir = PROCESS_KERNEL_STACK(new_pcb_vir);
     
     if (!new_pcb_phy || !new_pcb_vir) {
         fmt::println("Error: Unable to alloc memory for new process block!");
@@ -171,7 +177,7 @@ proc* create_process(uint32_t entry, const char* name) {
     
     proc* new_pcb = (proc*)new_pcb_vir;
 
-    uintptr_t cr3;
+    mm::vaddr_t cr3;
     new_pcb->cr3 = copy_page_dir(cr3);
     fmt::println("Copy page directory and page table. New page directory: {x}", new_pcb->cr3);
 
@@ -186,7 +192,7 @@ proc* create_process(uint32_t entry, const char* name) {
     new_pcb->sub_proc = new_pcb->next_proc = new_pcb->parent_proc = nullptr;
 
     fmt::println("Create user stack.");
-    uintptr_t user_stack = mm::pmm::alloc_page();
+    mm::paddr_t user_stack = mm::pmm::alloc_page();
     mm::pt::map_to_page_dir(cr3, user_stack_start - user_stack_size + 1, user_stack, PDE_PRESENT | PDE_READ_WRITE | PDE_USER_AVAL, PTE_PRESENT | PTE_READ_WRITE | PTE_USER_AVAL);
 
     // Create stack for iret
@@ -246,6 +252,8 @@ void init(uint32_t entry) {
     timer::register_event(10, timer::TIMER_PERIODIC, timer::TIMER_TICK, proc_timer_handler, nullptr);
     
     schedule();
+
+    kernel_idel_function();
 }
 
 void schedule() {
@@ -261,12 +269,16 @@ void schedule() {
     }
         
     current_pcb = front_ready_queue();
-    current_pcb->remaining = current_pcb->quantum;
-    current_pcb->state = proc_state::running;
+    if (current_pcb != nullptr) {
+        popfront_ready_queue();
+        current_pcb->remaining = current_pcb->quantum;
+        current_pcb->state = proc_state::running;
+        global_tss.esp0 = PROCESS_KERNEL_STACK(current_pcb);
+    } else {
+        current_pcb = &kernel_main_pcb;
+    }
 
-    popfront_ready_queue();
-
-    global_tss.esp0 = PROCESS_KERNEL_STACK(current_pcb);
+    if (current_pcb == old_proc) return;
     switch_to(old_proc, current_pcb);
 }
 
@@ -279,11 +291,11 @@ void proc_timer_handler(void *) {
 }
 
 pid_t sys_fork(int_frame_t* frame) {
-    uintptr_t sub_pcb_addr_phy = mm::pmm::alloc_page();
-    uintptr_t sub_pcb_addr_vir = mm::vmm::alloc_bit_page();
+    mm::paddr_t sub_pcb_addr_phy = mm::pmm::alloc_page();
+    mm::vaddr_t sub_pcb_addr_vir = mm::vmm::alloc_bit_page();
 
-    uintptr_t sub_ker_stack_phy = PROCESS_KERNEL_STACK(sub_pcb_addr_phy);
-    uintptr_t sub_ker_stack_vir = PROCESS_KERNEL_STACK(sub_pcb_addr_vir);
+    mm::paddr_t sub_ker_stack_phy = PROCESS_KERNEL_STACK(sub_pcb_addr_phy);
+    mm::vaddr_t sub_ker_stack_vir = PROCESS_KERNEL_STACK(sub_pcb_addr_vir);
     
     if (!sub_pcb_addr_phy || !sub_pcb_addr_vir) {
         fmt::println("Error: Unable to alloc memory for new process block!");
@@ -328,7 +340,7 @@ pid_t sys_fork(int_frame_t* frame) {
     }
 
     
-    uintptr_t sub_cr3;
+    mm::vaddr_t sub_cr3;
     sub_pcb->cr3 = copy_page_dir(sub_cr3);
     
     uint32_t offset = (uint32_t)frame - (uint32_t)current_pcb;

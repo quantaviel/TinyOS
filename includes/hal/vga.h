@@ -43,6 +43,7 @@ struct writer {
 
 void putchar(char ch);
 void write(const char* str);
+char recieve(const char&);
 
 void set_color(vga_color front, vga_color back);
 void set_addr(uintptr_t addr);

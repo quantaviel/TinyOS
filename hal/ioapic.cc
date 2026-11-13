@@ -6,7 +6,7 @@
 
 namespace ioapic {
 
-auto read(uint32_t offset) -> uint32_t {
+uint32_t read(uint32_t offset) {
     IOAPIC_IOREGSEL = offset;
     return IOAPIC_IOWIN;
 }
@@ -16,8 +16,8 @@ void write(uint32_t offset, uint32_t value) {
     IOAPIC_IOWIN = value;
 }
 
-auto get_version() -> int;
-auto get_irq(acpi_ctx_t *ctx, uint8_t old_irq) -> uint32_t;
+int get_version();
+uint32_t get_irq(acpi_ctx_t *ctx, uint8_t old_irq);
 void redirect(  uint8_t irq,
                 uint8_t intvec,
                 uint32_t masked,
@@ -55,11 +55,11 @@ void init() {
     );
 }
 
-auto get_version() -> int {
+int get_version() {
     uint32_t x = read(IOAPIC_VER);
     return x & 0xFF;
 }
-auto get_irq(acpi_ctx_t *ctx, uint8_t old_irq) -> uint32_t {
+uint32_t get_irq(acpi_ctx_t *ctx, uint8_t old_irq) {
     madt_iso_t **remapped_irq = ctx->madt->irq_execption;
     if (remapped_irq[old_irq] != NULL) return remapped_irq[old_irq]->gsi;
     return old_irq;

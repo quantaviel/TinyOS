@@ -4,18 +4,26 @@
 #include <stddef.h>
 
 /**
- * Circular Queue - Thread-Safe Ring Buffer
+ * Circular Queue - Thread-UnSafe Ring Buffer
  * Used for keyboard interrupt buffer
  */
 template<typename T, size_t Capacity>
-class CircularQueue {
+class circular_queue {
 public:
-    CircularQueue() : head_(0), tail_(0), count_(0) {}
+    circular_queue() : head_(0), tail_(0), count_(0), ALLOW_OVERFLOW(false) {}
+    
+    explicit
+    circular_queue(bool overflow) : head_(0), tail_(0), count_(0), ALLOW_OVERFLOW(overflow) {}
 
     // Push an element to the tail (producer side)
     bool push(T value) {
         if (count_ >= Capacity) {
-            return false;  // Buffer full
+            if (ALLOW_OVERFLOW) {
+                head_ = (head_ + 1) % Capacity;
+                count_--;
+            } else {
+                return false;  // Buffer full
+            }
         }
         buffer_[tail_] = value;
         tail_ = (tail_ + 1) % Capacity;
@@ -63,4 +71,6 @@ private:
     size_t head_;
     size_t tail_;
     size_t count_;
+
+    const bool ALLOW_OVERFLOW;
 };
